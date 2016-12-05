@@ -1,0 +1,178 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "mesh_Elmer"
+  Include Path ""
+  Results Directory ""
+End
+
+Simulation
+  Max Output Level = 9
+  Coordinate System = Cartesian
+  Coordinate Mapping(3) = 1 2 3
+  Angular Frequency = 628.32
+
+  Simulation Type = Transient
+  Steady State Max Iterations = 1
+  Output Intervals = 1
+  Timestepping Method = BDF
+  BDF Order = 2
+  Timestep Sizes = 0.1
+  Timestep Intervals = 1
+
+  Solver Input File = case.sif
+  Post File = case.vtu
+  Output Intervals(1) = 1
+End
+
+Constants
+  Gravity(4) = 0 -1 0 9.82
+  Stefan Boltzmann = 5.67e-08
+  Permittivity of Vacuum = 8.8542e-12
+  Permeability of Vacuum = 1.257e-6
+  Boltzmann Constant = 1.3807e-23
+  Unit Charge = 1.602e-19
+End
+
+Initial Condition 1
+  Temperature = 0
+  Velocity 1 = 0
+  Velocity 2 = 0
+  Velocity 3 = 0
+End
+
+Body 1
+  Target Bodies(1) = 6
+  Name = "Wire"
+  Equation = 1
+  Material = 1
+  Body Force = 1
+  Initial Condition = 1
+End
+
+Body 2
+  Target Bodies(1) = 7
+  Name = "Cylinder"
+  Equation = 1
+  Material = 2
+  Body Force = 2
+  Initial Condition = 1
+End
+
+Body 3
+  Target Bodies(1) = 8
+  Name = "Air"
+  Equation = 1
+  Material = 1
+  Initial Condition = 1
+End
+
+Solver 1
+  Equation = "MGDynamics"
+
+  Variable = P[P re:1 P im:1]
+  Procedure = "MagnetoDynamics" "WhitneyAVHarmonicSolver"
+
+  Linear System Symmetric = Logical True
+  Linear System Complex = Logical True
+
+  Linear System Solver = "Iterative"
+  Linear System Residual Output = 10
+  Linear System Max Iterations = 5000
+  Linear System Iterative Method = BiCGStabL
+  Linear System Convergence Tolerance = 1.0e-8
+  Linear System Preconditioning = Diagonal
+
+  Steady State Convergence Tolerance = 1e-8
+  Nonlinear System Convergence Tolerance = 1.0e-8
+  Nonlinear System Max Iterations = 20
+  Nonlinear System Newton After Iterations = 10
+  Nonlinear System Newton After Tolerance = 1.0e-8
+  Nonlinear System Relaxation Factor = 1
+
+  !Use Piola Transform = Logical True
+  !BicGStabL Polynomial Degree = 3
+  !Automated Source Projection BCs = Logical False
+  !Edge Basis = Logical True
+  !Quadratic Approximation = Logical True
+  Newton-Raphson Iteration = Logical True
+  Linear System Precondition Recompute = 1
+  Discontinuous Bodies = True
+End
+
+Solver 2
+  Equation = "MGDynamicsCalc"
+  Procedure = "MagnetoDynamics" "MagnetoDynamicsCalcFields"
+  Linear System Symmetric = Logical True
+  Potential Variable = String "P"
+
+  Calculate Magnetic Field Strength = Logical True
+  Calculate Current Density = Logical True
+  Calculate Electric Field = Logical True
+  Calculate JxB = Logical True
+  Calculate Joule Heating = Logical True
+
+  Steady State Convergence Tolerance = 1e-8
+  Linear System Solver = "Iterative"
+  Linear System Preconditioning = Diagonal
+  Linear System Residual Output = 10
+  Linear System Max Iterations = 1000
+  Linear System Iterative Method = CG
+  Linear System Convergence Tolerance = 1.0e-8
+
+  Nonlinear System Convergence Tolerance = 1.0e-8
+  Nonlinear System Max Iterations = 10
+  Nonlinear System Newton After Iterations = 10
+  Nonlinear System Newton After Tolerance = 1.0e-8
+  Nonlinear System Relaxation Factor = 1
+
+  Calculate harmonic peak power = Logical False
+  !Use Piola Transform = Logical True
+  !BicGStabL Polynomial Degree = 3
+
+  !Edge Basis = Logical True
+  !Quadratic Approximation = Logical True
+  Linear System Precondition Recompute = 1
+  Discontinuous Bodies = True
+End
+
+Equation 1
+  Name = "MGDyn"
+  Active Solvers(2) = 1 2
+  Magnetic Induction = Logical True
+End
+
+Material 1
+  Name = "Air"
+  Electric Conductivity = 0
+  Relative Permittivity = 1
+  Relative Permeability = 1
+End
+
+Material 2
+  Name = "Conductor"
+  Electric Conductivity = 1e6
+  Relative Permittivity = 1
+  Relative Permeability = 1
+End
+
+Body Force 1
+  Name = "Current"
+
+  Current Density im 1 = Variable coordinate
+    Real MATC "-1e8*tx(1)"
+
+  Current Density im 2 = Variable coordinate
+    Real MATC "1e8*tx(0)"
+End
+
+Body Force 2
+  Lorentz Force = Logical True
+  Joule Heat = Logical True
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 4
+  Name = "farfield"
+  P re {e} = real 0
+  P im {e} = real 0
+End

@@ -1,3 +1,9 @@
+libs/mpiElmer/lnInclude
+libs/mpiElmer/Make/*/
+libs/mhdPisoFoam/Make/*/
+runs/
+
+
 # Compiled Object files
 *.slo
 *.lo
