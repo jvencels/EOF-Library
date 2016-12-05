@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
     }
 
     delete[] nCellsPerElmerProc;
-    delete[] cellCentres_x, cellCentres_y, cellCentres_z;
+    delete[] cellCentres_x, cellCentres_y, cellCentres_z, recvBuff;
 
     Info<< "End\n" << endl;
 

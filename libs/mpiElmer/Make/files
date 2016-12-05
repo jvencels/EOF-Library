@@ -3,4 +3,4 @@ UIPread.C
 UPstream.C
 PstreamGlobals.C
 
-LIB = $(FOAM_USER_LIBBIN)/libPstreamElmer
+LIB = $(FOAM_USER_LIBBIN)/libPstream
