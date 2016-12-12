@@ -162,7 +162,6 @@ void Foam::UPstream::exit(int errnum)
     if (errnum == 0)
     {
         MPI_Comm_free(&Foam::PstreamGlobals::MPI_OF_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Finalize();
         ::exit(errnum);
     }

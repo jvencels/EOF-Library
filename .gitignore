@@ -1,5 +1,5 @@
-libs/mpiElmer/lnInclude
-libs/mpiElmer/Make/*/
+libs/commSplit/lnInclude
+libs/commSplit/Make/*/
 libs/mhdPisoFoam/Make/*/
 runs/
 
