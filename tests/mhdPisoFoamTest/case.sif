@@ -135,9 +135,20 @@ Solver 2
   Discontinuous Bodies = True
 End
 
+Solver 3
+  Equation = ElmerToOpenFOAM
+  Procedure = "Elmer2OpenFOAM" "Elmer2OpenFOAMSolver"
+
+  MPI Coupling = Logical True
+  Target Variable 1 = joule heating
+  Target Variable 2 = jxb re 1
+  Target Variable 3 = jxb re 2
+  Target Variable 4 = jxb re 3
+End
+
 Equation 1
   Name = "MGDyn"
-  Active Solvers(2) = 1 2
+  Active Solvers(3) = 1 2 3
   Magnetic Induction = Logical True
 End
 

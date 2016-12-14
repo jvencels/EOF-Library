@@ -1,0 +1,3 @@
+Elmer.C
+
+LIB = $(FOAM_USER_LIBBIN)/libElmer
