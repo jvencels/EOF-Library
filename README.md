@@ -8,14 +8,15 @@ Tested on:
 * Open MPI v2.0.1 (https://www.open-mpi.org/software/ompi/v2.0/)
 
 ## How to ##
-* Download modified Elmer (https://github.com/jvencels/elmerfem.git)
-* Change git branch to "OF"
+* Download Elmer (https://github.com/ElmerCSC/elmerfem.git)
+* Change git branch to "ElmerCommWorld"
+* Obtain `Elmer2OpenFOAM.F90` solver (currently not publicly published)
 
 ```
-git checkout OF
+git checkout ElmerCommWorld
  ```
 
-* Compile modified Elmer with `-DWITH_MPI=TRUE`
+* Compile Elmer with `-DWITH_MPI=TRUE`
 * Download OpenFOAM (http://openfoam.org/) source and compile
 * Download modified OpenFOAM libraries, solvers and tests:
 
@@ -26,7 +27,9 @@ git clone https://github.com/jvencels/OpenFOAM_Elmer.git
 * Compile library and solver
 
 ```
-cd OpenFOAM_Elmer/libs/mpiElmer
+cd OpenFOAM_Elmer/libs/commSplit
+wmake
+cd ../coupleElmer
 wmake
 cd ../mhdPisoFoam
 wmake
@@ -61,11 +64,9 @@ decomposePar
 mpirun -np 2 mhdPisoFoam -parallel : -np 1 ElmerSolver_mpi
 ```
 
-* Note that OpenFOAM writes to terminal while Elmer writes to file "Elmer 0"
 * Postprocessing
 
 ```
-rm Elmer\ \ 0
 reconstructPar
 paraFoam
 ```

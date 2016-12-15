@@ -103,7 +103,8 @@ mesh_(mesh)
     }
 
     if (totCellsFound != nCells) {
-        FatalErrorInFunction << "Wrong number of received cells" << Foam::abort(FatalError); 
+        FatalErrorInFunction << "OpenFOAM #" << myLocalRank << " has " << nCells
+                             << " cells, Elmer found " << totCellsFound << Foam::abort(FatalError); 
     }
 
     for ( i=0; i<totElmerRanks; i++ ) {
