@@ -11,30 +11,30 @@ FoamFile
     format      ascii;
     class       volScalarField;
     location    "0";
-    object      nut;
+    object      sigma;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 2 -1 0 0 0 0];
+dimensions      [0 0 0 0 0 0 0];
 
-internalField   uniform 0;
+internalField   uniform 1e6;
 
 boundaryField
 {
     Cyl_top
     {
-        type            nutkWallFunction;
-        value           uniform 0;
+        type            fixedValue;
+        value           uniform 1e6;
     }
     Cyl_mdl
     {
-        type            nutkWallFunction;
-        value           uniform 0;
+        type            fixedValue;
+        value           uniform 1e6;
     }
     Cyl_btm
     {
-        type            nutkWallFunction;
-        value           uniform 0;
+        type            fixedValue;
+        value           uniform 1e6;
     }
 }
 

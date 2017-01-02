@@ -68,7 +68,21 @@ volScalarField JH
     mesh
 );
 
-// kinematic turbulent thermal thermal conductivity m2/s
+Info<< "Initializing field sigma\n" << endl;
+volScalarField sigma
+(
+    IOobject
+    (
+        "sigma",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+// kinematic turbulent thermal conductivity m2/s
 Info<< "Reading field alphat\n" << endl;
 volScalarField alphat
 (

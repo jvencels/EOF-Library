@@ -32,6 +32,7 @@ SourceFiles
 
 Authors: Juris Vencels
 Email:   juris.vencels@gmail.com
+Web:     http://www.vencels.com
 
 Original Date: 12.12.2016.
 
@@ -60,23 +61,40 @@ public:
     // Public data
 
         //- Construct and initialize
-        Elmer(const fvMesh& meshOF);
+        Elmer(const fvMesh& mesh, int mode);
+
+        //- Send interpolated scalar field at element centres to Elmer
+        void sendScalar(volScalarField& field);
+
+        //- Send interpolated vector field at element centres to Elmer
+        void sendVector(volVectorField& field);
 
         //- Get interpolated scalar field at cell centres from Elmer
-        void getScalar(volScalarField& field);
+        void recvScalar(volScalarField& field);
 
         //- Get interpolated vector field at cell centres from Elmer
-        void getVector(volVectorField& field);
+        void recvVector(volVectorField& field);
 
         //- Data structure for each Elmer MPI rank
         class ElmerProc_t
         {
             public:
-		        int *foundCellsIndx;
+                // MPI stuff
 		        MPI_Request *reqSend, *reqRecv;
 		        int globalRank;
+
+                // Receiving fields from Elmer
+		        int *foundCellsIndx;
 		        int nFoundCells;
-				double *recvValues;
+				double *recvBuffer0;
+
+                // Sending fields to Elmer
+                int nElem;
+                double *sendBuffer0, *sendBuffer1, *sendBuffer2;
+                label *foundElement;
+                int *foundElementIndx;
+		        int nFoundElements;
+                point *positions;
         };
 
 private:
@@ -85,6 +103,9 @@ private:
 
         //- Number of cells for this OpenFOAM MPI rank
         const fvMesh& mesh_;
+
+        //- Coupling mode: 1=send, -1=receive, 0=both
+        const int mode_;
 
         //- Number of cells for this OpenFOAM MPI rank
         int nCells;
@@ -115,6 +136,9 @@ private:
 
         //- Data structure for each Elmer MPI rank
         ElmerProc_t *ELp;
+
+        // Interpolation types used for interpolating Elmer's elemental field
+        dictionary interpolationDict;
 
 };
 

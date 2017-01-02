@@ -9,14 +9,15 @@ Tested on:
 
 ## How to ##
 * Download Elmer (https://github.com/ElmerCSC/elmerfem.git)
-* Change git branch to "ElmerCommWorld"
-* Obtain `Elmer2OpenFOAM.F90` solver (currently not publicly published)
+* Compile Elmer with `-DWITH_MPI=TRUE`
+* Obtain `Elmer2OpenFOAM.F90` and `OpenFOAM2Elmer.F90` solvers (currently not publicly published)
+* Compile `Elmer2OpenFOAM.F90` and `OpenFOAM2Elmer.F90`
 
 ```
-git checkout ElmerCommWorld
- ```
+elmerf90 -o Elmer2OpenFOAM.so Elmer2OpenFOAM.F90
+elmerf90 -o OpenFOAM2Elmer.so OpenFOAM2Elmer.F90
+```
 
-* Compile Elmer with `-DWITH_MPI=TRUE`
 * Download OpenFOAM (http://openfoam.org/) source and compile
 * Download modified OpenFOAM libraries, solvers and tests:
 

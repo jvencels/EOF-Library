@@ -25,14 +25,16 @@ License
 
 #include "Elmer.H"
 #include <new>
+#include "interpolation.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-Foam::Elmer::Elmer(const fvMesh& mesh)
+Foam::Elmer::Elmer(const fvMesh& mesh, int mode)
 :
-mesh_(mesh)
+mesh_(mesh),
+mode_(mode)
 {
-    int i;
+    int i, j, k;
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -52,78 +54,158 @@ mesh_(mesh)
         ElmerRanksStart = 0;
     }
 
-    nCells = mesh_.cells().size();
-
     ELp = new (std::nothrow) ElmerProc_t[totElmerRanks];
 
     if (ELp == nullptr) {
         FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError); 
     }
 
-    cellCentres_x = new (std::nothrow) double[nCells];
-    cellCentres_y = new (std::nothrow) double[nCells];
-    cellCentres_z = new (std::nothrow) double[nCells];
+    for ( i=0; i<totElmerRanks; i++ ) {
+        ELp[i].globalRank = i+ElmerRanksStart;
+    }
 
-    if (cellCentres_x == nullptr || cellCentres_y == nullptr || cellCentres_z == nullptr) {
-        FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError); 
-    } else {
-        forAll(mesh_.cells(),cellI) 
-        { 
-            cellCentres_x[cellI] = mesh_.C()[cellI].component(0);
-            cellCentres_y[cellI] = mesh_.C()[cellI].component(1);
-            cellCentres_z[cellI] = mesh_.C()[cellI].component(2);
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Receiving from Elmer
+    if (mode_==-1) {
+        nCells = mesh_.cells().size();
+
+        cellCentres_x = new (std::nothrow) double[nCells];
+        cellCentres_y = new (std::nothrow) double[nCells];
+        cellCentres_z = new (std::nothrow) double[nCells];
+
+        if (cellCentres_x == nullptr || cellCentres_y == nullptr || cellCentres_z == nullptr) {
+            FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError); 
+        } else {
+            forAll(mesh_.cells(),cellI) 
+            { 
+                cellCentres_x[cellI] = mesh_.C()[cellI].component(0);
+                cellCentres_y[cellI] = mesh_.C()[cellI].component(1);
+                cellCentres_z[cellI] = mesh_.C()[cellI].component(2);
+            }
+        }
+
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        Info<< "Sending data to Elmer.." << endl;
+
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Send(&nCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, MPI_COMM_WORLD);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Send(cellCentres_x, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Send(cellCentres_y, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Send(cellCentres_z, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
+        }
+
+        int totCellsFound = 0;
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Recv(&ELp[i].nFoundCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, 
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            totCellsFound += ELp[i].nFoundCells;
+        }
+
+        if (totCellsFound != nCells) {
+            FatalErrorInFunction << "OpenFOAM #" << myLocalRank << " has " << nCells
+                                 << " cells, Elmer found " << totCellsFound << Foam::abort(FatalError); 
+        }
+
+        for ( i=0; i<totElmerRanks; i++ ) {
+            if ( ELp[i].nFoundCells > 0 ) {
+                ELp[i].foundCellsIndx = new (std::nothrow) int[ELp[i].nFoundCells];
+                ELp[i].recvBuffer0 = new (std::nothrow) double[ELp[i].nFoundCells];
+
+                if (ELp[i].foundCellsIndx == nullptr || ELp[i].recvBuffer0 == nullptr) {
+                    FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError); 
+                }
+
+                MPI_Recv(ELp[i].foundCellsIndx, ELp[i].nFoundCells, MPI_INTEGER,
+                          ELp[i].globalRank, 999, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
         }
     }
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Sending fields to Elmer
+    if (mode_==1) {
 
-    MPI_Barrier(MPI_COMM_WORLD);
+        //interpolationDict = mesh.solutionDict().subDict("interpolationSchemes");
+        //fvSchemes = mesh.lookupObject<IOdictionary>("fvSchemes");
 
-    Info<< "Sending data to Elmer.." << endl;
+        // Extract the dictionary from the database
+        const dictionary& fvSchemes = mesh.lookupObject<IOdictionary>
+        (
+           "fvSchemes"
+        );
 
-    for ( i=0; i<totElmerRanks; i++ ) {
-        ELp[i].globalRank = i+ElmerRanksStart;
-        MPI_Send(&nCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, MPI_COMM_WORLD);
-    }
+        // Exctract subdictionary from the main dictionary
+        interpolationDict = fvSchemes.subDict("interpolationSchemes");
 
-    for ( i=0; i<totElmerRanks; i++ ) {
-        MPI_Send(cellCentres_x, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
-    }
-    for ( i=0; i<totElmerRanks; i++ ) {
-        MPI_Send(cellCentres_y, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
-    }
-    for ( i=0; i<totElmerRanks; i++ ) {
-        MPI_Send(cellCentres_z, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
-    }
+        // Extracting scalar value
+        //dimensionedScalar myScalar(mySubDict.lookup("myScalar"));
 
-    int totCellsFound = 0;
-    for ( i=0; i<totElmerRanks; i++ ) {
-        MPI_Recv(&ELp[i].nFoundCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        totCellsFound += ELp[i].nFoundCells;
-    }
+        MPI_Barrier(MPI_COMM_WORLD);
 
-    if (totCellsFound != nCells) {
-        FatalErrorInFunction << "OpenFOAM #" << myLocalRank << " has " << nCells
-                             << " cells, Elmer found " << totCellsFound << Foam::abort(FatalError); 
-    }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Recv(&ELp[i].nElem, 1, MPI_INTEGER, ELp[i].globalRank, 899, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            Pout<< "Received " << ELp[i].nElem << " elements from Elmer #" << i << endl;
 
-    for ( i=0; i<totElmerRanks; i++ ) {
-        if ( ELp[i].nFoundCells > 0 ) {
-            ELp[i].foundCellsIndx = new (std::nothrow) int[ELp[i].nFoundCells];
-            ELp[i].recvValues = new (std::nothrow) double[ELp[i].nFoundCells];
+            ELp[i].sendBuffer0 = new (std::nothrow) double[ELp[i].nElem];
+            ELp[i].sendBuffer1 = new (std::nothrow) double[ELp[i].nElem];
+            ELp[i].sendBuffer2 = new (std::nothrow) double[ELp[i].nElem];
+            ELp[i].foundElement = new (std::nothrow) label[ELp[i].nElem];
+            ELp[i].positions = new (std::nothrow) point[ELp[i].nElem];
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Recv(ELp[i].sendBuffer0, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 899, 
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Recv(ELp[i].sendBuffer1, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 899, 
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Recv(ELp[i].sendBuffer2, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 899, 
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
 
-            if (ELp[i].foundCellsIndx == nullptr || ELp[i].recvValues == nullptr) {
-                FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError); 
+        Info<< "Searching for cells.." << endl;
+        for ( i=0; i<totElmerRanks; i++ ) {
+            ELp[i].nFoundElements = 0;
+            for ( j=0; j<ELp[i].nElem; j++ ) {
+                ELp[i].positions[j].x() = ELp[i].sendBuffer0[j];
+                ELp[i].positions[j].y() = ELp[i].sendBuffer1[j];
+                ELp[i].positions[j].z() = ELp[i].sendBuffer2[j];
+                ELp[i].foundElement[j] = mesh.findCell(ELp[i].positions[j]);
+                if (ELp[i].foundElement[j] != -1) ELp[i].nFoundElements++;
             }
-
-            MPI_Recv(ELp[i].foundCellsIndx, ELp[i].nFoundCells, MPI_INTEGER,
-                      ELp[i].globalRank, 999, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
+            ELp[i].foundElementIndx = new (std::nothrow) int[ELp[i].nFoundElements];
+            MPI_Send(&ELp[i].nFoundElements, 1, MPI_INTEGER, ELp[i].globalRank, 899, MPI_COMM_WORLD);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            if (ELp[i].nFoundElements > 0) {
+                k = 0;
+                for ( j=0; j<ELp[i].nElem; j++ ) {
+                    if (ELp[i].foundElement[j] != -1) {
+                        ELp[i].foundElementIndx[k] = j;
+                        k++;
+                    }
+                }
+                MPI_Send(ELp[i].foundElementIndx, ELp[i].nFoundElements, MPI_INTEGER, 
+                         ELp[i].globalRank, 899, MPI_COMM_WORLD);
+            }
         }
     }
 }
 
 
-void Foam::Elmer::getScalar(volScalarField& field)
+void Foam::Elmer::recvScalar(volScalarField& field)
 {
     int i, j;
 
@@ -131,17 +213,17 @@ void Foam::Elmer::getScalar(volScalarField& field)
 
     for ( i=0; i<totElmerRanks; i++ ) {
         if ( ELp[i].nFoundCells > 0 ) {
-            MPI_Recv(ELp[i].recvValues, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
+            MPI_Recv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
                       1000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             for (j=0; j<ELp[i].nFoundCells; j++ ) {
-                field[ELp[i].foundCellsIndx[j]] = ELp[i].recvValues[j];
+                field[ELp[i].foundCellsIndx[j]] = ELp[i].recvBuffer0[j];
             }
         }
     }
 }
 
 
-void Foam::Elmer::getVector(volVectorField& field)
+void Foam::Elmer::recvVector(volVectorField& field)
 {
     int i, j, dim;
 
@@ -150,14 +232,46 @@ void Foam::Elmer::getVector(volVectorField& field)
     for (dim=0; dim<3; dim++) { 
         for ( i=0; i<totElmerRanks; i++ ) {
             if ( ELp[i].nFoundCells > 0 ) {
-                MPI_Recv(ELp[i].recvValues, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
+                MPI_Recv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
                           1000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 for (j=0; j<ELp[i].nFoundCells; j++ ) {
-                    field[ELp[i].foundCellsIndx[j]].component(dim) = ELp[i].recvValues[j];
+                    field[ELp[i].foundCellsIndx[j]].component(dim) = ELp[i].recvBuffer0[j];
                 }
             }
         }
     }
+}
+
+
+void Foam::Elmer::sendScalar(volScalarField& field)
+{
+    int i, j;
+
+    autoPtr<interpolation<scalar> > interpField = interpolation<scalar>::New(interpolationDict, field);
+
+    Info<< "Sending scalar field to Elmer.." << endl;
+
+    for ( i=0; i<totElmerRanks; i++ ) {
+        if ( ELp[i].nFoundElements > 0 ) {
+            for (j=0; j<ELp[i].nFoundElements; j++) {
+                ELp[i].sendBuffer0[j] = interpField->
+                       interpolate(ELp[i].positions[j], ELp[i].foundElement[ELp[i].foundElementIndx[j]]);
+            }
+            MPI_Send(ELp[i].sendBuffer0, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank, 
+                      900, MPI_COMM_WORLD);
+        }
+    }
+}
+
+
+void Foam::Elmer::sendVector(volVectorField& field)
+{
+    int i, j, dim;
+
+    autoPtr<interpolation<vector> > interpField = interpolation<vector>::New(interpolationDict, field);
+
+    Info<< "Sending vector field to Elmer.." << endl;
+    FatalErrorInFunction << "Functionality not available" << Foam::abort(FatalError); 
 }
 
 // ************************************************************************* //

@@ -59,10 +59,12 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting time loop\n" << endl;
 
-    Elmer coupling(mesh);
+    Elmer sending(mesh,1); // 1=send, -1=receive
+    sending.sendScalar(sigma);
 
-    coupling.getScalar(JH);
-    coupling.getVector(JxB);
+    Elmer receiving(mesh,-1); // 1=send, -1=receive
+    receiving.recvScalar(JH);
+    receiving.recvVector(JxB);
 
     while (runTime.loop())
     {
