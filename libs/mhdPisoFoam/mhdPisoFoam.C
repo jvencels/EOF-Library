@@ -92,6 +92,11 @@ int main(int argc, char *argv[])
         Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s"
             << nl << endl;
+
+        sending.sendScalar(sigma);
+        receiving.recvScalar(JH);
+        receiving.recvVector(JxB);
+
     }
 
     Info<< "End\n" << endl;

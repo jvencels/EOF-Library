@@ -11,7 +11,11 @@ Simulation
   Coordinate Mapping(3) = 1 2 3
   Angular Frequency = 628.32
 
-  Simulation Type = Steady
+  Simulation Type = Transient
+  Timestepping Method = BDF
+  BDF Order = 2
+  Timestep Sizes = 0.005
+  Timestep Intervals = 11
   Steady State Max Iterations = 1
 
 
