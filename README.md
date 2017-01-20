@@ -1,5 +1,5 @@
 # OpenFOAM_Elmer
-Modiefied OpenFOAM library and test cases for MPI-coupled OpenFOAM + Elmer solvers. Used for solving coupled electromagnetic induction and MHD problems.
+Libraries for OpenFOAM and Elmer coupling + test cases. Used for solving coupled electromagnetic induction and MHD problems.
 
 ## Requirements ##
 
@@ -10,7 +10,6 @@ Tested on:
 ## How to ##
 * Download Elmer (https://github.com/ElmerCSC/elmerfem.git)
 * Compile Elmer with `-DWITH_MPI=TRUE`
-* Obtain `Elmer2OpenFOAM.F90` and `OpenFOAM2Elmer.F90` solvers (currently not publicly published)
 * Compile `Elmer2OpenFOAM.F90` and `OpenFOAM2Elmer.F90`
 
 ```
@@ -32,7 +31,7 @@ cd OpenFOAM_Elmer/libs/commSplit
 wmake
 cd ../coupleElmer
 wmake
-cd ../mhdPisoFoam
+cd ../mhdInterFoam
 wmake
 ```
 * Set environment variable (add to `.bashrc`)
@@ -47,22 +46,20 @@ export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
 cd ../..
 mkdir runs
 cd runs
-cp -r ../tests/mhdPisoFoamTest .
+cp -r ../tests/mhdInterFoamTest_2D .
 ```
 
 * Prepare test
 
 ```
-cd mhdPisoFoamTest
-ElmerGrid 8 2 mesh_Elmer
-ideasUnvToFoam mesh_OpenFOAM.unv
+cd mhdInterFoamTest_2D
 decomposePar
 ```
 
 * Run OpenFOAM on 2 processes and Elmer on 1 process
 
 ```
-mpirun -np 2 mhdPisoFoam -parallel : -np 1 ElmerSolver_mpi
+mpirun -np 2 mhdInterFoam -parallel : -np 1 ElmerSolver_mpi
 ```
 
 * Postprocessing
@@ -72,5 +69,4 @@ reconstructPar
 paraFoam
 ```
 
-* Tick "JxB" and "JH" fields and load OpenFOAM results
 * To open Elmer results, open `mesh_Elmer/case_0001.vtu`
