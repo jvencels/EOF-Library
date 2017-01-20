@@ -6,21 +6,18 @@ Header
 End
 
 Simulation
-  Max Output Level = 4
+  Max Output Level = 3
   Coordinate System = Cartesian
-  Angular Frequency = 314.16
+  Angular Frequency = $2*pi*100
 
-  Simulation Type = Transient
-  Timestepping Method = BDF
-  BDF Order = 2
-  Timestep Sizes = 0.01
-  Timestep Intervals = 101
-  Steady State Max Iterations = 1
+  Simulation Type = Steady
+  Steady State Max Iterations = 1000000
+  Steady State Min Iterations = 1000000
 
 
   Solver Input File = case.sif
   Post File = case.vtu
-  Output Intervals(1) = 1
+  Output Intervals(1) = 100
 End
 
 Constants
@@ -79,8 +76,10 @@ Solver 2
   Linear System Iterative Method = BiCGStabl
   Linear System Convergence Tolerance = 1.0e-8
 
-  !BicgStabl Polynomial Degree = 4
-  !Optimize Bandwidth = False
+  Steady State Convergence Tolerance = 1e-08
+  Nonlinear System Max Iterations = 3
+  Nonlinear System Convergence Tolerance = 1.0e-6
+  Nonlinear System Relaxation Factor = 1
 
   Exported Variable 1 = String "OF conductivity"
 End
@@ -97,9 +96,12 @@ Solver 3
   Linear System Max Iterations = 100
   Linear System Preconditioning = None
   Linear System Convergence Tolerance = 1.0e-8
+  Steady State Convergence Tolerance = 1e-08
+
+  Nonlinear System Max Iterations = 3
+  Nonlinear System Convergence Tolerance = 1.0e-8
 
   Calculate Current Density = Logical True
-  Calculate Electric Field = Logical True
   Calculate Magnetic Field Strength = Logical True
   Calculate JxB = Logical True
   Calculate Joule Heating = True
@@ -136,12 +138,12 @@ End
 
 Body Force 1
   Name = "Current pos"
-  Current Density = Real 1e7
+  Current Density = Real 4e9
 End
 
 Body Force 2
   Name = "Current neg"
-  Current Density = Real -1e7
+  Current Density = Real -4e9
 End
 
 Boundary Condition 1

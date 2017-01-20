@@ -14,8 +14,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include        "include/initialConditions"
-
 dimensions      [0 0 0 0 0 0 0];
 
 internalField   uniform 0;
@@ -38,7 +36,10 @@ boundaryField
     }
     ".*"
     {
-        type            zeroGradient;
+        type           constantAlphaContactAngle;
+        theta0         45;
+        limit          gradient;
+        value          uniform 0;
     }
 }
 

@@ -205,10 +205,11 @@ mode_(mode)
 }
 
 
-void Foam::Elmer::recvScalar(volScalarField& field)
+void Foam::Elmer::recvScalar(volScalarField& field, int status)
 {
     int i, j;
 
+    sendStatus(status);
     Info<< "Receiving scalar field from Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
@@ -223,10 +224,11 @@ void Foam::Elmer::recvScalar(volScalarField& field)
 }
 
 
-void Foam::Elmer::recvVector(volVectorField& field)
+void Foam::Elmer::recvVector(volVectorField& field, int status)
 {
     int i, j, dim;
 
+    sendStatus(status);
     Info<< "Receiving vector field from Elmer.." << endl;
 
     for (dim=0; dim<3; dim++) { 
@@ -243,10 +245,11 @@ void Foam::Elmer::recvVector(volVectorField& field)
 }
 
 
-void Foam::Elmer::sendScalar(volScalarField& field)
+void Foam::Elmer::sendScalar(volScalarField& field, int status)
 {
     int i, j;
 
+    sendStatus(status);
     autoPtr<interpolation<scalar> > interpField = interpolation<scalar>::New(interpolationDict, field);
 
     Info<< "Sending scalar field to Elmer.." << endl;
@@ -264,14 +267,26 @@ void Foam::Elmer::sendScalar(volScalarField& field)
 }
 
 
-void Foam::Elmer::sendVector(volVectorField& field)
+void Foam::Elmer::sendVector(volVectorField& field, int status)
 {
     int i, j, dim;
 
+    sendStatus(status);
     autoPtr<interpolation<vector> > interpField = interpolation<vector>::New(interpolationDict, field);
 
     Info<< "Sending vector field to Elmer.." << endl;
     FatalErrorInFunction << "Functionality not available" << Foam::abort(FatalError); 
 }
 
+
+void Foam::Elmer::sendStatus(int status)
+{
+    int i;
+
+    if (myLocalRank==0) {
+        for ( i=0; i<totElmerRanks; i++ ) {
+            MPI_Send(&status, 1, MPI_INTEGER, ELp[i].globalRank,799, MPI_COMM_WORLD);
+        }
+    }
+}
 // ************************************************************************* //

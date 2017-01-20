@@ -56,6 +56,20 @@ volScalarField elcond
     mesh
 );
 
+Info<< "Initializing field alpha_old\n" << endl;
+volScalarField alpha_old
+(
+    IOobject
+    (
+        "alpha_old",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh
+);
+
 #include "createPhi.H"
 
 

@@ -10,30 +10,38 @@ FoamFile
     version     2.0;
     format      ascii;
     class       volScalarField;
-    object      p;
+    object      alpha_old;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 2 -2 0 0 0 0];
+dimensions      [0 0 0 0 0 0 0];
 
 internalField   uniform 0;
 
 boundaryField
 {
-    Cyl_top
+    top
     {
-        type            zeroGradient;
+        type            inletOutlet;
+        inletValue      uniform 0;
+        value           uniform 0;
     }
-
-    Cyl_mdl
+    back
     {
-        type            zeroGradient;
+        type            empty;
     }
-
-    Cyl_btm
+    front
     {
-        type            zeroGradient;
+        type            empty;
+    }
+    ".*"
+    {
+        type           constantAlphaContactAngle;
+        theta0         90;
+        limit          gradient;
+        value          uniform 0;
     }
 }
+
 
 // ************************************************************************* //

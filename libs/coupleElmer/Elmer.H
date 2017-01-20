@@ -30,9 +30,13 @@ Description
 SourceFiles
     Elmer.C
 
-Authors: Juris Vencels
-Email:   juris.vencels@gmail.com
-Web:     http://www.vencels.com
+Authors:   Juris Vencels
+Email:     juris.vencels@gmail.com
+Web:       http://vencels.com
+Address:   University of Latvia
+           Laboratory for mathematical modelling of 
+               environmental and technological processes
+           Zellu Str. 23, Riga, LV-1002, Latvia
 
 Original Date: 12.12.2016.
 
@@ -64,16 +68,19 @@ public:
         Elmer(const fvMesh& mesh, int mode);
 
         //- Send interpolated scalar field at element centres to Elmer
-        void sendScalar(volScalarField& field);
+        void sendScalar(volScalarField& field, int status);
 
         //- Send interpolated vector field at element centres to Elmer
-        void sendVector(volVectorField& field);
+        void sendVector(volVectorField& field, int status);
 
         //- Get interpolated scalar field at cell centres from Elmer
-        void recvScalar(volScalarField& field);
+        void recvScalar(volScalarField& field, int status);
 
         //- Get interpolated vector field at cell centres from Elmer
-        void recvVector(volVectorField& field);
+        void recvVector(volVectorField& field, int status);
+
+        //- Simulation status (1=ok, 0=lastIter, -1=error)
+        void sendStatus(int status);
 
         //- Data structure for each Elmer MPI rank
         class ElmerProc_t

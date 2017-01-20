@@ -33,7 +33,13 @@ Description
 
     Turbulence modelling is generic, i.e. laminar, RAS or LES may be selected.
 
-    For a two-fluid approach see twoPhaseEulerFoam.
+Authors:   Juris Vencels
+Email:     juris.vencels@gmail.com
+Web:       http://vencels.com
+Address:   University of Latvia
+           Laboratory for mathematical modelling of 
+               environmental and technological processes
+           Zellu Str. 23, Riga, LV-1002, Latvia
 
 \*---------------------------------------------------------------------------*/
 
@@ -84,12 +90,19 @@ int main(int argc, char *argv[])
     // Send fields with Elmer
     Elmer sending(mesh,1); // 1=send, -1=receive
     elcond = alpha1 * elcond_ref;
-    sending.sendScalar(elcond);
+    sending.sendScalar(elcond,1); // 1=ok, 0=lastIter, -1=error
 
     // Receive fields with Elmer
     Elmer receiving(mesh,-1); // 1=send, -1=receive
-    receiving.recvVector(JxB);
-    JxB = alpha1 * JxB;
+    receiving.recvVector(JxB,1); // 1=ok, 0=lastIter, -1=error
+    forAll(mesh.cells(),cellI)
+    {
+        if(alpha1[cellI]<0.5) {
+            JxB[cellI].component(0) = 0;
+            JxB[cellI].component(1) = 0;
+            JxB[cellI].component(2) = 0;
+        }
+    }
 
     while (runTime.run())
     {
@@ -132,28 +145,42 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Velocity fix, do not move air
-        forAll(mesh.cells(),cellI) 
-        {
-            if(alpha1[cellI]<0.99) {
-                U[cellI].component(0) = 0;
-                U[cellI].component(1) = 0;
-                U[cellI].component(2) = 0;
-            }
-        }
-
         runTime.write();
 
         Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s"
             << nl << endl;
 
-        // Communicate fields with Elmer
-        elcond = alpha1 * elcond_ref;
-        sending.sendScalar(elcond);
-        receiving.recvVector(JxB);
-        JxB = alpha1 * JxB;
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+        // Check whether we need to update electromagnetic stuff with Elmer
+        double maxRelDiff = (max(mag(alpha_old - alpha1))).value();
+
+        bool doElmer = false;
+        if(maxRelDiff>0.2) {
+            doElmer = true;
+        }
+
+        if(doElmer || !runTime.run()) {
+            alpha_old = alpha1;
+            // Communicate fields with Elmer
+            double commTime = MPI_Wtime();
+            elcond = alpha1 * elcond_ref;
+            sending.sendScalar(elcond,int(runTime.run()));
+            Info<< "OpenFOAM2Elmer = " << MPI_Wtime()-commTime << " s" << nl << endl;
+
+            commTime = MPI_Wtime();
+            receiving.recvVector(JxB,runTime.run());
+            forAll(mesh.cells(),cellI)
+            {
+                if(alpha1[cellI]<0.5) {
+                    JxB[cellI].component(0) = 0;
+                    JxB[cellI].component(1) = 0;
+                    JxB[cellI].component(2) = 0;
+                }
+            }
+            Info<< "Elmer2OpenFOAM = " << MPI_Wtime()-commTime << " s" << nl << endl;
+        }
     }
 
     Info<< "End\n" << endl;
