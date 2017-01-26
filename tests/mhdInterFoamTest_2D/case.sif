@@ -17,7 +17,7 @@ Simulation
 
   Solver Input File = case.sif
   Post File = case.vtu
-  Output Intervals(1) = 100
+  Output Intervals(1) = 0
 End
 
 Constants
