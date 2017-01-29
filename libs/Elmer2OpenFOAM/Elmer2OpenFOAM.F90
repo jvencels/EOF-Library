@@ -180,12 +180,10 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       ALLOCATE( OFp(i) % OFMesh % Nodes % x( OFp(i) % OFMesh % NumberOfNodes ), &
                 OFp(i) % OFMesh % Nodes % y( OFp(i) % OFMesh % NumberOfNodes ), &
                 OFp(i) % OFMesh % Nodes % z( OFp(i) % OFMesh % NumberOfNodes ), &
-                OFp(i) % OFVar % Perm( OFp(i) % OFMesh % NumberOfNodes ), &
                 OFp(i) % foundCells( OFp(i) % OFMesh % NumberOfNodes ) )
 
       OFp(i) % OFMesh % NumberOfBulkElements = 0
       OFp(i) % OFMesh % NumberOfBoundaryElements = 0
-      OFp(i) % OFVar % Perm = (/ (j, j = 1, OFp(i) % OFMesh % NumberOfNodes) /)
       OFp(i) % OFMesh % Projector => NULL()
       OFp(i) % foundCells = .FALSE.
 
@@ -224,7 +222,10 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
 
       IF ( OFp(i) % nFoundCells > 0 ) THEN
         ALLOCATE( OFp(i) % OFVar % Values( OFp(i) % nFoundCells ), &
-                  OFp(i) % foundCellsIndx( OFp(i) % nFoundCells ) )
+                  OFp(i) % foundCellsIndx( OFp(i) % nFoundCells ), &
+                  OFp(i) % OFVar % Perm( OFp(i) % nFoundCells ) )
+
+        OFp(i) % OFVar % Perm = (/ (j, j = 1, OFp(i) % nFoundCells) /)
 
         ! Number of cells found in each Elmer process
         CALL MPI_ISEND( OFp(i) % nFoundCells, 1, MPI_INTEGER, &
@@ -274,6 +275,7 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
 
     DO i = 0, totOFRanks - 1
       IF ( OFp(i) % nFoundCells > 0 ) THEN
+        OFp(i) % OFVar % Values = 0
         CALL CRS_ApplyProjector( OFp(i) % OFMesh % Projector % Matrix, Var % Values, &
                      Var % Perm, OFp(i) % OFVar % Values, OFp(i) % OFVar % Perm )
 
