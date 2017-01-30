@@ -226,17 +226,17 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
                   OFp(i) % OFVar % Perm( OFp(i) % nFoundCells ) )
 
         OFp(i) % OFVar % Perm = (/ (j, j = 1, OFp(i) % nFoundCells) /)
-
-        ! Number of cells found in each Elmer process
-        CALL MPI_ISEND( OFp(i) % nFoundCells, 1, MPI_INTEGER, &
-                        OFp(i) % globalRank, 999, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
       END IF
+
+      ! Number of cells found in each Elmer process
+      CALL MPI_ISEND( OFp(i) % nFoundCells, 1, MPI_INTEGER, &
+                      OFp(i) % globalRank, 999, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
+      ! wait for nFoundCells
+      CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr)
       IF ( OFp(i) % nFoundCells > 0 ) THEN
-        ! wait for nFoundCells
-        CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr)
         OFp(i) % foundCellsIndx = PACK((/ (j, j = 0, OFp(i) % OFMesh % NumberOfNodes-1) /),OFp(i) % foundCells)
 
         ! Indexes for cells that were found on this piece of Elmer mesh

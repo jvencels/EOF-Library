@@ -289,7 +289,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       END IF
     END DO
 
-    IF (totElementsFound .NE. nElements) THEN
+    IF (totElementsFound < nElements) THEN
       CALL Fatal('OpenFOAM2ElmerSolver','Elmer #'//TRIM(I2S(myLocalRank))//' has ' &
                  //TRIM(I2S(nElements))//' elements, OpenFOAM found '//TRIM(I2S(totElementsFound)))
     END IF
