@@ -27,7 +27,7 @@
                   - fvc::snGrad(p_rgh)
                 ) * mesh.magSf()
             )
-            + JxB*alpha1/rho1
+            + JxB
         );
 
         fvOptions.correct(U);

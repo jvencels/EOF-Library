@@ -8,7 +8,7 @@ End
 Simulation
   Max Output Level = 3
   Coordinate System = Cartesian
-  Angular Frequency = $2*pi*100
+  Angular Frequency = $2*pi*1000
 
   Simulation Type = Steady
   Steady State Max Iterations = 1000000
@@ -138,12 +138,12 @@ End
 
 Body Force 1
   Name = "Current pos"
-  Current Density = Real 4e9
+  Current Density = Real 1e7
 End
 
 Body Force 2
   Name = "Current neg"
-  Current Density = Real -4e9
+  Current Density = Real -1e7
 End
 
 Boundary Condition 1

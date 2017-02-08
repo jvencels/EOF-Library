@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    interFoam
+    mhdInterFoam = Elmer + interFoam
 
 Description
     Solver for 2 incompressible, isothermal immiscible fluids using a VOF
@@ -87,12 +87,12 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting time loop\n" << endl;
 
-    // Send fields with Elmer
+    // Send fields to Elmer
     Elmer sending(mesh,1); // 1=send, -1=receive
     elcond = alpha1 * elcond_ref;
     sending.sendScalar(elcond,1); // 1=ok, 0=lastIter, -1=error
 
-    // Receive fields with Elmer
+    // Receive fields from Elmer
     Elmer receiving(mesh,-1); // 1=send, -1=receive
     receiving.recvVector(JxB,1); // 1=ok, 0=lastIter, -1=error
     forAll(mesh.cells(),cellI)
