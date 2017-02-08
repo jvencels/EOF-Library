@@ -110,7 +110,7 @@ mode_(mode)
             totCellsFound += ELp[i].nFoundCells;
         }
 
-        if (totCellsFound != nCells) {
+        if (totCellsFound < nCells) {
             FatalErrorInFunction << "OpenFOAM #" << myLocalRank << " has " << nCells
                                  << " cells, Elmer found " << totCellsFound << Foam::abort(FatalError); 
         }

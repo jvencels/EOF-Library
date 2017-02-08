@@ -88,8 +88,8 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
   LOGICAL :: Found
   
   INTERFACE
-    SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
-       NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes, NewMaskPerm)
+    SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, NewVariables, &
+        UseQuadrantTree, Projector, MaskName, FoundNodes, NewMaskPerm, KeepUnfoundNodes )
       USE Types
       TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
       TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
@@ -97,6 +97,7 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       CHARACTER(LEN=*),OPTIONAL :: MaskName
       TYPE(Projector_t), POINTER, OPTIONAL :: Projector
       INTEGER, OPTIONAL, POINTER :: NewMaskPerm(:)  !< Mask the new variable set by the given MaskName when trying to define the interpolation.
+       LOGICAL, OPTIONAL :: KeepUnfoundNodes  !< Do not disregard unfound nodes from projector
     END SUBROUTINE InterpolateMeshToMeshQ
   END INTERFACE
 
@@ -215,8 +216,12 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       CALL MPI_WAIT( OFp(i) % reqRecv, MPI_STATUS_IGNORE, ierr )
       IF ( CoordinateSystemDimension() == 2 ) OFp(i) % OFMesh % Nodes % z = 0
 
-      CALL InterpolateMeshToMeshQ( CurrentModel % Mesh, OFp(i) % OFMesh, UseQuadrantTree=.TRUE., &
-                            Projector=OFp(i) % OFMesh % Projector, FoundNodes=OFp(i) % foundCells)
+      CALL InterpolateMeshToMeshQ( OldMesh          = CurrentModel % Mesh, &
+                                   NewMesh          = OFp(i) % OFMesh, &
+                                   UseQuadrantTree  = .TRUE., &
+                                   Projector        = OFp(i) % OFMesh % Projector, &
+                                   FoundNodes       = OFp(i) % foundCells, &
+                                   KeepUnfoundNodes = .FALSE.)
 
       OFp(i) % nFoundCells = COUNT(OFp(i) % foundCells)
 
