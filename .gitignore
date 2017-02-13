@@ -2,8 +2,8 @@ libs/commSplit/lnInclude
 libs/commSplit/Make/*/
 libs/coupleElmer/lnInclude
 libs/coupleElmer/Make/*/
-libs/mhdPisoFoam/Make/*/
 libs/mhdInterFoam/Make/*/
+libs/mhdThermoInterFoam/Make/*/
 runs/
 
 
