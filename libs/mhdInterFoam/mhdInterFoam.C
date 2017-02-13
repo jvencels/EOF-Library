@@ -89,20 +89,15 @@ int main(int argc, char *argv[])
 
     // Send fields to Elmer
     Elmer sending(mesh,1); // 1=send, -1=receive
+    sending.sendStatus(1); // 1=ok, 0=lastIter, -1=error
     elcond = alpha1 * elcond_ref;
-    sending.sendScalar(elcond,1); // 1=ok, 0=lastIter, -1=error
+    sending.sendScalar(elcond);
 
     // Receive fields from Elmer
     Elmer receiving(mesh,-1); // 1=send, -1=receive
-    receiving.recvVector(JxB,1); // 1=ok, 0=lastIter, -1=error
-    forAll(mesh.cells(),cellI)
-    {
-        if(alpha1[cellI]<0.5) {
-            JxB[cellI].component(0) = 0;
-            JxB[cellI].component(1) = 0;
-            JxB[cellI].component(2) = 0;
-        }
-    }
+    receiving.sendStatus(1); // 1=ok, 0=lastIter, -1=error
+    receiving.recvVector(JxB);
+    JxB *= alpha1;
 
     while (runTime.run())
     {
@@ -163,22 +158,21 @@ int main(int argc, char *argv[])
 
         if(doElmer || !runTime.run()) {
             alpha_old = alpha1;
-            // Communicate fields with Elmer
             double commTime = MPI_Wtime();
-            elcond = alpha1 * elcond_ref;
-            sending.sendScalar(elcond,int(runTime.run()));
-            Info<< "OpenFOAM2Elmer = " << MPI_Wtime()-commTime << " s" << nl << endl;
 
+            // Send fields to Elmer
+            sending.sendStatus(runTime.run());
+            elcond = alpha1 * elcond_ref;
+            sending.sendScalar(elcond);
+
+            Info<< "OpenFOAM2Elmer = " << MPI_Wtime()-commTime << " s" << nl << endl;
             commTime = MPI_Wtime();
-            receiving.recvVector(JxB,runTime.run());
-            forAll(mesh.cells(),cellI)
-            {
-                if(alpha1[cellI]<0.5) {
-                    JxB[cellI].component(0) = 0;
-                    JxB[cellI].component(1) = 0;
-                    JxB[cellI].component(2) = 0;
-                }
-            }
+
+            // Receive fields form Elmer
+            receiving.sendStatus(runTime.run());
+            receiving.recvVector(JxB);
+            JxB *= alpha1;
+
             Info<< "Elmer2OpenFOAM = " << MPI_Wtime()-commTime << " s" << nl << endl;
         }
     }

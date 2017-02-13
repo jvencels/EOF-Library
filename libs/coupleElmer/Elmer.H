@@ -68,16 +68,16 @@ public:
         Elmer(const fvMesh& mesh, int mode);
 
         //- Send interpolated scalar field at element centres to Elmer
-        void sendScalar(volScalarField& field, int status);
+        void sendScalar(volScalarField& field);
 
         //- Send interpolated vector field at element centres to Elmer
-        void sendVector(volVectorField& field, int status);
+        void sendVector(volVectorField& field);
 
         //- Get interpolated scalar field at cell centres from Elmer
-        void recvScalar(volScalarField& field, int status);
+        void recvScalar(volScalarField& field);
 
         //- Get interpolated vector field at cell centres from Elmer
-        void recvVector(volVectorField& field, int status);
+        void recvVector(volVectorField& field);
 
         //- Simulation status (1=ok, 0=lastIter, -1=error)
         void sendStatus(int status);

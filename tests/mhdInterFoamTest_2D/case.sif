@@ -104,7 +104,6 @@ Solver 3
   Calculate Current Density = Logical True
   Calculate Magnetic Field Strength = Logical True
   Calculate JxB = Logical True
-  Calculate Joule Heating = True
 End
 
 Solver 4

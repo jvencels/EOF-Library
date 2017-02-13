@@ -205,11 +205,10 @@ mode_(mode)
 }
 
 
-void Foam::Elmer::recvScalar(volScalarField& field, int status)
+void Foam::Elmer::recvScalar(volScalarField& field)
 {
     int i, j;
 
-    sendStatus(status);
     Info<< "Receiving scalar field from Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
@@ -224,11 +223,10 @@ void Foam::Elmer::recvScalar(volScalarField& field, int status)
 }
 
 
-void Foam::Elmer::recvVector(volVectorField& field, int status)
+void Foam::Elmer::recvVector(volVectorField& field)
 {
     int i, j, dim;
 
-    sendStatus(status);
     Info<< "Receiving vector field from Elmer.." << endl;
 
     for (dim=0; dim<3; dim++) { 
@@ -245,11 +243,10 @@ void Foam::Elmer::recvVector(volVectorField& field, int status)
 }
 
 
-void Foam::Elmer::sendScalar(volScalarField& field, int status)
+void Foam::Elmer::sendScalar(volScalarField& field)
 {
     int i, j;
 
-    sendStatus(status);
     autoPtr<interpolation<scalar> > interpField = interpolation<scalar>::New(interpolationDict, field);
 
     Info<< "Sending scalar field to Elmer.." << endl;
@@ -267,11 +264,10 @@ void Foam::Elmer::sendScalar(volScalarField& field, int status)
 }
 
 
-void Foam::Elmer::sendVector(volVectorField& field, int status)
+void Foam::Elmer::sendVector(volVectorField& field)
 {
     int i, j, dim;
 
-    sendStatus(status);
     autoPtr<interpolation<vector> > interpField = interpolation<vector>::New(interpolationDict, field);
 
     Info<< "Sending vector field to Elmer.." << endl;
