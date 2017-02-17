@@ -4,6 +4,8 @@ libs/coupleElmer/lnInclude
 libs/coupleElmer/Make/*/
 libs/mhdInterFoam/Make/*/
 libs/mhdThermoInterFoam/Make/*/
+libs/mhdThermoInterFoam/TableVisc/Make/*/
+libs/mhdThermoInterFoam/TableVisc/lnInclude
 runs/
 
 
