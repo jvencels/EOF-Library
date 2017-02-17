@@ -111,13 +111,26 @@ volScalarField& alpha2(mixture.alpha2());
 const dimensionedScalar& rho1 = mixture.rho1();
 const dimensionedScalar& rho2 = mixture.rho2();
 
+volScalarField alpha1f
+(
+    IOobject
+    (
+        "alpha1f",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    alpha1
+);
+
 // Heat capacity
 dimensionedScalar cp1("cp", dimSpecificHeatCapacity, mixture.nuModel1().viscosityProperties());
 dimensionedScalar cp2("cp", dimSpecificHeatCapacity, mixture.nuModel2().viscosityProperties());
 
-// Prandtl number
-dimensionedScalar Pr1("Pr", dimless, mixture.nuModel1().viscosityProperties());
-dimensionedScalar Pr2("Pr", dimless, mixture.nuModel2().viscosityProperties());
+// Thermal conductivity number
+dimensionedScalar kappa1("kappa", dimPower/dimLength/dimTemperature, mixture.nuModel1().viscosityProperties());
+dimensionedScalar kappa2("kappa", dimPower/dimLength/dimTemperature, mixture.nuModel2().viscosityProperties());
 
 // Need to store rho for ddt(rho, U)
 volScalarField rho

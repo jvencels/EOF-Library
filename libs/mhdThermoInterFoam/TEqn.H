@@ -1,7 +1,5 @@
 {
-
-    volScalarField kappaf = alpha1*rho1*cp1/Pr1*mixture.nuModel1().nu()
-                              + alpha2*rho2*cp2/Pr2*mixture.nuModel2().nu();
+    volScalarField kappaf = alpha1f*kappa1 + (scalar(1)-alpha1f)*kappa2;
 
     fvScalarMatrix TEqn
     (

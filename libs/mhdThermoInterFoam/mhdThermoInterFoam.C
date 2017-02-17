@@ -132,6 +132,9 @@ int main(int argc, char *argv[])
             mixture.correct();
 
             #include "UEqn.H"
+
+            // Fix alpha1
+            alpha1f = min(max(alpha1, scalar(0)), scalar(1));
             #include "TEqn.H"
 
             // --- Pressure corrector loop
@@ -155,7 +158,7 @@ int main(int argc, char *argv[])
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
         // Check whether we need to update electromagnetic stuff with Elmer
-        double maxRelDiff = (max(mag(alpha_old - alpha1))).value();
+        double maxRelDiff = (max(mag(alpha_old - alpha1f))).value();
 
         bool doElmer = false;
         if(maxRelDiff>0.2) {
@@ -163,12 +166,12 @@ int main(int argc, char *argv[])
         }
 
         if(doElmer || !runTime.run()) {
-            alpha_old = alpha1;
+            alpha_old = alpha1f;
             double commTime = MPI_Wtime();
 
             // Send fields to Elmer
             sending.sendStatus(runTime.run());
-            elcond = alpha1 * elcond_ref;
+            elcond = alpha1f * elcond_ref;
             sending.sendScalar(elcond);
 
             Info<< "OpenFOAM2Elmer = " << MPI_Wtime()-commTime << " s" << nl << endl;
@@ -177,9 +180,9 @@ int main(int argc, char *argv[])
             // Receive fields form Elmer
             receiving.sendStatus(runTime.run());
             receiving.recvVector(JxB);
-            JxB *= alpha1;
+            JxB *= alpha1f;
             receiving.recvScalar(JH);
-            JH *= alpha1;
+            JH *= alpha1f;
 
             Info<< "Elmer2OpenFOAM = " << MPI_Wtime()-commTime << " s" << nl << endl;
         }
