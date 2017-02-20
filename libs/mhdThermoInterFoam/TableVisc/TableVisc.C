@@ -61,7 +61,7 @@ Foam::viscosityModels::TableVisc::TableVisc
             IOobject::AUTO_WRITE
         ),
         U_.mesh(),
-        dimensionedScalar(name, dimViscosity, 0)
+        dimensionedScalar(name, dimViscosity, 1)
     ),
     nuFile("constant/nuT"),
     nuGraph("nuTinterp","Temp","nuT",nuFile)

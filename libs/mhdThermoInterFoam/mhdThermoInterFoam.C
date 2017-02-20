@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
     JxB *= alpha1;
     receiving.recvScalar(JH);
     JH *= alpha1;
+    JH.field() = max(JH.field(),scalar(0));
 
     while (runTime.run())
     {
@@ -161,7 +162,7 @@ int main(int argc, char *argv[])
         double maxRelDiff = (max(mag(alpha_old - alpha1f))).value();
 
         bool doElmer = false;
-        if(maxRelDiff>0.2) {
+        if(maxRelDiff>0.5) {
             doElmer = true;
         }
 
@@ -183,6 +184,7 @@ int main(int argc, char *argv[])
             JxB *= alpha1f;
             receiving.recvScalar(JH);
             JH *= alpha1f;
+            JH.field() = max(JH.field(),scalar(0));
 
             Info<< "Elmer2OpenFOAM = " << MPI_Wtime()-commTime << " s" << nl << endl;
         }
