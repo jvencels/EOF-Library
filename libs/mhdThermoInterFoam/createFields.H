@@ -9,7 +9,7 @@ volScalarField p_rgh
         runTime.timeName(),
         mesh,
         IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     ),
     mesh
 );
@@ -51,7 +51,7 @@ volScalarField elcond
         runTime.timeName(),
         mesh,
         IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     ),
     mesh
 );
@@ -219,7 +219,7 @@ surfaceScalarField alphaPhi
         runTime.timeName(),
         mesh,
         IOobject::READ_IF_PRESENT,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     ),
     phi*fvc::interpolate(alpha1)
 );
