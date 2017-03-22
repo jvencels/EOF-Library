@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
         double maxRelDiff = (max(mag(alpha_old - alpha1))).value();
 
         bool doElmer = false;
-        if(maxRelDiff>0.2) {
+        if(maxRelDiff>0.5) {
             doElmer = true;
         }
 

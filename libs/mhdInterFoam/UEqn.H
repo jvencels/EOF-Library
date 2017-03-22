@@ -7,6 +7,7 @@
       + turbulence->divDevRhoReff(rho, U)
      ==
         fvOptions(rho, U)
+      + JxB
     );
 
     UEqn.relax();
@@ -27,7 +28,6 @@
                   - fvc::snGrad(p_rgh)
                 ) * mesh.magSf()
             )
-            + JxB
         );
 
         fvOptions.correct(U);
