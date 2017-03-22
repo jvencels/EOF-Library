@@ -204,8 +204,6 @@
         rhoPhi = alphaPhi*(rho1 - rho2) + phi*rho2;
     }
 
-    rhoPhiCp = alphaPhi*(rho1*cp1 - rho2*cp2) + phi*rho2*cp2;
-
     Info<< "Phase-1 volume fraction = "
         << alpha1.weightedAverage(mesh.Vsc()).value()
         << "  Min(" << alpha1.name() << ") = " << min(alpha1).value()

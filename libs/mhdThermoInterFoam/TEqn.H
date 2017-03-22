@@ -1,13 +1,13 @@
 {
-    volScalarField kappaf = alpha1f*kappa1 + (scalar(1)-alpha1f)*kappa2;
+    volScalarField kappaf = alpha1f*kappa1/cp1 + (scalar(1)-alpha1f)*kappa2/cp2;
 
     fvScalarMatrix TEqn
     (
-        fvm::ddt(rhoCp, T)
-      + fvm::div(rhoPhiCp, T)
+        fvm::ddt(rho, T)
+      + fvm::div(rhoPhi, T)
       - (
             fvm::laplacian(kappaf, T)
-          + JH
+          + JH*(alpha1f/cp1 + (scalar(1)-alpha1f)/cp2)
         )
     );
 

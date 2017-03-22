@@ -146,20 +146,6 @@ volScalarField rho
 );
 rho.oldTime();
 
-// Need to store rhoCp for ddt(rhoCp, T)
-volScalarField rhoCp
-(
-    IOobject
-    (
-        "rhoCp",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    alpha1*rho1*cp1 + alpha2*rho2*cp2
-);
-
 // Mass flux
 surfaceScalarField rhoPhi
 (
@@ -172,20 +158,6 @@ surfaceScalarField rhoPhi
         IOobject::NO_WRITE
     ),
     fvc::interpolate(rho)*phi
-);
-
-// Heat flux
-surfaceScalarField rhoPhiCp
-(
-    IOobject
-    (
-        "rhoPhiCp",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    rhoPhi*cp1
 );
 
 // Construct incompressible turbulence model
