@@ -91,16 +91,13 @@ void Foam::viscosityModels::TableVisc::correct()
     // Iterpolate internal field
     nu_.field() = interpolateXY(T.field(), nuGraph.x(), nuGraph.y());
 
-    /*// Iterpolate boundary field
-    forAll(nu_.boundaryField(), patchi)
+    // Iterpolate boundary field
+    volScalarField::Boundary& nuBf = nu_.boundaryFieldRef();
+
+    forAll(nuBf, patchi)
     {
-	    nu_.boundaryField()[patchi] = interpolateXY
-        (
-            T.boundaryField()[patchi],
-            nuGraph.x(),
-            nuGraph.y()
-        );
-    }*/
+        nuBf[patchi] = interpolateXY(T.boundaryField()[patchi],nuGraph.x(),nuGraph.y());
+    }
 }
 
 
