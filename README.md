@@ -15,6 +15,8 @@ sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
 * Download Elmer (https://github.com/jvencels/elmerfem.git). You also can obtain it from developers repo (https://github.com/ElmerCSC/elmerfem) without any guarantee that coupling will work.
 * Configure and compile Elmer with `-DWITH_MPI=TRUE` by following these steps (https://www.csc.fi/web/elmer/sources-and-compilation).
 
+* Alternately, Elmer could be installed from launchpad (http://www.elmerfem.org/forum/viewtopic.php?f=2&t=4413&sid=030ab0826313901cc9419b89d35021d2). This has been verified to work in Ubuntu 16.04 with OpenFOAM_Elmer software.
+
 * Download modified OpenFOAM libraries, solvers and tests:
 
 ```
