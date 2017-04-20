@@ -2,7 +2,7 @@
 Libraries for OpenFOAM and Elmer MPI coupling + test cases. Used for solving coupled electromagnetic induction and MHD problems. This software is developed at Laboratory for mathematical modelling of environmental and technological processes (University of Latvia). 
 
 ## Requirements ##
-Tested on Ubuntu 14.04.
+Tested on Ubuntu 14.04 and Ubuntu 16.04.
 You will need `git`, `cmake`, `gfortran`, `blas` and `lapack`. 
 
 ```
