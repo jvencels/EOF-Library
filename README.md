@@ -20,10 +20,16 @@ sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
 ```
 git clone https://github.com/jvencels/OpenFOAM_Elmer.git
 ```
-
+* Add this line to `.bashrc`
 ```
 export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
 ```
+* Check the mpi type and version
+```
+which mpirun
+mpirun --version
+```
+* The result of which mpirun should be /usr/bin/mpirun and must be associated with openmpi as OpenFOAM is based upon openmpi
 
 * Compile libraries and solver
 
