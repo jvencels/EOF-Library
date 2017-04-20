@@ -12,10 +12,9 @@ sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
 ## How to ##
 
 * Download, install and configure OpenFOAM (http://openfoam.org/download/4-1-ubuntu/)
-* Download Elmer (https://github.com/jvencels/elmerfem.git). You also can obtain it from developers repo (https://github.com/ElmerCSC/elmerfem) without any guarantee that coupling will work.
-* Configure and compile Elmer with `-DWITH_MPI=TRUE` by following these steps (https://www.csc.fi/web/elmer/sources-and-compilation).
+* Download Elmer (https://github.com/jvencels/elmerfem.git). You also can obtain it from developers repo (https://github.com/ElmerCSC/elmerfem) without any guarantee that coupling will work. Alternately, Elmer could be installed from launchpad (https://launchpad.net/~elmer-csc-ubuntu/+archive/ubuntu/elmer-csc-ppa). This has been verified to work in Ubuntu 16.04 with OpenFOAM_Elmer software.
 
-* Alternately, Elmer could be installed from launchpad (http://www.elmerfem.org/forum/viewtopic.php?f=2&t=4413&sid=030ab0826313901cc9419b89d35021d2). This has been verified to work in Ubuntu 16.04 with OpenFOAM_Elmer software.
+* Configure and compile Elmer with `-DWITH_MPI=TRUE` by following these steps (https://www.csc.fi/web/elmer/sources-and-compilation).
 
 * Download modified OpenFOAM libraries, solvers and tests:
 
@@ -26,13 +25,11 @@ git clone https://github.com/jvencels/OpenFOAM_Elmer.git
 ```
 export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
 ```
-* Check the mpi type and version
+* Check the MPI implementation and version
 ```
 which mpirun
 mpirun --version
 ```
-* The result of which mpirun should be /usr/bin/mpirun and must be associated with openmpi as OpenFOAM is based upon openmpi
-
 * Compile libraries and solver
 
 ```
