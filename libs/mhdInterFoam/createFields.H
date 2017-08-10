@@ -9,7 +9,7 @@ volScalarField p_rgh
         runTime.timeName(),
         mesh,
         IOobject::MUST_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh
 );
@@ -50,10 +50,11 @@ volScalarField elcond
         "elcond",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
-    mesh
+    mesh,
+	dimensionedScalar("zero", dimless, 0)
 );
 
 Info<< "Initializing field alpha_old\n" << endl;
@@ -64,10 +65,11 @@ volScalarField alpha_old
         "alpha_old",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
-    mesh
+    mesh,
+	dimensionedScalar("zero", dimless, 0)
 );
 
 #include "createPhi.H"
