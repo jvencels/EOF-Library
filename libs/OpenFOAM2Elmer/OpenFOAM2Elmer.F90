@@ -329,6 +329,11 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     DO i = 0, totOFRanks - 1
       IF ( OFp(i) % nFoundElements > 0 ) THEN
         CALL MPI_WAIT( OFp(i) % reqRecv, MPI_STATUS_IGNORE, ierr)
+
+        WHERE (OFp(i) % recvValues<EPSILON(OFp(i) % recvValues)) ! Fix floating point exception
+          OFp(i) % recvValues = 0
+        END WHERE
+
         DO k = 1, OFp(i) % nFoundElements
           Element => GetActiveElement(commElementId(OFp(i) % foundElementIndx(k)))
           Var % Values(Var % Perm(Element % NodeIndexes)) = Var % Values(Var % Perm(Element % NodeIndexes))&
