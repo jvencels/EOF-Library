@@ -162,7 +162,6 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
 
     ! Starting communication
     !------------------------------------------------------------------------
-    CALL MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
     DO i = 0, totOFRanks - 1
       ! Number of OpenFOAM cells

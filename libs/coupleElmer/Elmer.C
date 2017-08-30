@@ -34,7 +34,7 @@ Foam::Elmer::Elmer(const fvMesh& mesh, int mode)
 mesh_(mesh),
 mode_(mode)
 {
-    int i, j, k;
+    int i, j, k, flag;
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -86,8 +86,6 @@ mode_(mode)
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-        MPI_Barrier(MPI_COMM_WORLD);
-
         Info<< "Sending data to Elmer.." << endl;
 
         for ( i=0; i<totElmerRanks; i++ ) {
@@ -105,6 +103,11 @@ mode_(mode)
 
         int totCellsFound = 0;
         for ( i=0; i<totElmerRanks; i++ ) {
+            while ( true ) {
+                MPI_Iprobe(ELp[i].globalRank, 999, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+                if (flag) break;
+                nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+            }
             MPI_Recv(&ELp[i].nFoundCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             totCellsFound += ELp[i].nFoundCells;
@@ -146,12 +149,12 @@ mode_(mode)
         // Exctract subdictionary from the main dictionary
         interpolationDict = fvSchemes.subDict("interpolationSchemes");
 
-        // Extracting scalar value
-        //dimensionedScalar myScalar(mySubDict.lookup("myScalar"));
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
         for ( i=0; i<totElmerRanks; i++ ) {
+            while ( true ) {
+                MPI_Iprobe(ELp[i].globalRank, 899, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+                if (flag) break;
+                nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+            }
             MPI_Recv(&ELp[i].nElem, 1, MPI_INTEGER, ELp[i].globalRank, 899, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             Pout<< "Received " << ELp[i].nElem << " elements from Elmer #" << i << endl;
 
@@ -207,12 +210,17 @@ mode_(mode)
 
 void Foam::Elmer::recvScalar(volScalarField& field)
 {
-    int i, j;
+    int i, j, flag;
 
     Info<< "Receiving scalar field from Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
         if ( ELp[i].nFoundCells > 0 ) {
+            while ( true ) {
+                MPI_Iprobe(ELp[i].globalRank, 1000, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+                if (flag) break;
+                nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+            }
             MPI_Recv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
                       1000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             for (j=0; j<ELp[i].nFoundCells; j++ ) {
@@ -225,13 +233,18 @@ void Foam::Elmer::recvScalar(volScalarField& field)
 
 void Foam::Elmer::recvVector(volVectorField& field)
 {
-    int i, j, dim;
+    int i, j, dim, flag;
 
     Info<< "Receiving vector field from Elmer.." << endl;
 
     for (dim=0; dim<3; dim++) { 
         for ( i=0; i<totElmerRanks; i++ ) {
             if ( ELp[i].nFoundCells > 0 ) {
+                while ( true ) {
+                    MPI_Iprobe(ELp[i].globalRank, 1000, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+                    if (flag) break;
+                    nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+                }
                 MPI_Recv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
                           1000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 for (j=0; j<ELp[i].nFoundCells; j++ ) {

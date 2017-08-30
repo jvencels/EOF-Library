@@ -96,7 +96,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   TYPE(Variable_t), POINTER :: Var
   CHARACTER(LEN=MAX_NAME_LEN) :: VarName
   INTEGER :: i, j, k, n, ierr, OFstatus
-  LOGICAL :: Found
+  LOGICAL :: Found, Flag
   TYPE(ValueList_t), POINTER :: Material
   TYPE(ValueListEntry_t), POINTER :: ptrVar
   TYPE(Element_t), POINTER :: Element
@@ -235,7 +235,6 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
     ! Starting communication
     !------------------------------------------------------------------------
-    CALL MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
     DO i = 0, totOFRanks - 1
       ! Number of Elmer elements
@@ -306,7 +305,13 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
   ! Receive simulation status
   CALL MPI_IRECV( OFstatus, 1, MPI_INTEGER, OFp(0) % globalRank, 799, MPI_COMM_WORLD, OFp(0) % reqRecv, ierr)
-  CALL MPI_WAIT( OFp(0) % reqRecv, MPI_STATUS_IGNORE, ierr )
+
+  DO WHILE ( .TRUE. )
+    CALL MPI_TEST( OFp(0) % reqRecv, Flag, MPI_STATUS_IGNORE, ierr )
+    IF (Flag) EXIT
+    CALL SLEEP(1)
+  END DO
+
   IF (OFstatus.NE.1) THEN
     CALL Info('OpenFOAM2ElmerSolver','Elmer has last iteration!', Level=3 )
     exitcond = ListGetCReal( CurrentModel % Simulation,'Exit Condition',Found)
