@@ -42,6 +42,20 @@ volVectorField JxB
     mesh
 );
 
+Info<< "Initializing field JxB_recv\n" << endl;
+volVectorField JxB_recv
+(
+    IOobject
+    (
+        "JxB_recv",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    JxB
+);
+
 Info<< "Initializing field elcond\n" << endl;
 volScalarField elcond
 (
