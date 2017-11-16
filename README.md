@@ -1,4 +1,4 @@
-# OpenFOAM_Elmer
+# EOF-Library
 Libraries for OpenFOAM and Elmer MPI coupling + test cases. Used for solving coupled electromagnetic induction and MHD problems. This software is developed at Laboratory for mathematical modelling of environmental and technological processes (University of Latvia). 
 
 ## Requirements ##

@@ -48,10 +48,11 @@ volScalarField elcond
         "elcond",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
-    mesh
+    mesh,
+	dimensionedScalar("zero", dimensionSet(-1, -3, 3, 0, 0, 2, 0), 0)
 );
 
 #include "createPhi.H"
@@ -77,4 +78,4 @@ autoPtr<incompressible::turbulenceModel> turbulence
 dimensionedScalar rho("rho", dimDensity, laminarTransport);
 
 // Reference conductivity
-dimensionedScalar elcond_ref("elcond_ref", dimless, laminarTransport);
+dimensionedScalar elcond_ref("elcond_ref", dimensionSet(-1, -3, 3, 0, 0, 2, 0), laminarTransport);

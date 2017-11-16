@@ -279,12 +279,34 @@ void Foam::Elmer::sendScalar(volScalarField& field)
 
 void Foam::Elmer::sendVector(volVectorField& field)
 {
-    int i, j, dim;
+    int i, j;
 
     autoPtr<interpolation<vector> > interpField = interpolation<vector>::New(interpolationDict, field);
 
     Info<< "Sending vector field to Elmer.." << endl;
-    FatalErrorInFunction << "Functionality not available" << Foam::abort(FatalError); 
+
+    for ( i=0; i<totElmerRanks; i++ ) {
+        if ( ELp[i].nFoundElements > 0 ) {
+            for (j=0; j<ELp[i].nFoundElements; j++) {
+                vector tmpVector = interpField->
+                       interpolate(ELp[i].positions[j], ELp[i].foundElement[ELp[i].foundElementIndx[j]]);
+                ELp[i].sendBuffer0[j] = tmpVector.component(0);
+                ELp[i].sendBuffer1[j] = tmpVector.component(1);
+                ELp[i].sendBuffer2[j] = tmpVector.component(2);
+            }
+        }
+    }
+
+    for ( i=0; i<totElmerRanks; i++ ) {
+        if ( ELp[i].nFoundElements > 0 ) {
+            MPI_Send(ELp[i].sendBuffer0, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank,
+                       900, MPI_COMM_WORLD);
+            MPI_Send(ELp[i].sendBuffer1, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank,
+                       900, MPI_COMM_WORLD);
+            MPI_Send(ELp[i].sendBuffer2, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank,
+                       900, MPI_COMM_WORLD);
+        }
+    }
 }
 
 
