@@ -7,6 +7,7 @@ libs/mhdThermoInterFoam/Make/*/
 libs/mhdThermoInterFoam/TableVisc/Make/*/
 libs/mhdThermoInterFoam/TableVisc/lnInclude
 libs/mhdPimpleFoam/Make/*/
+libs/mhdVxBPimpleFoam/Make/*/
 runs/
 
 
