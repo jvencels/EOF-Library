@@ -68,7 +68,7 @@ MODULE OpenFOAM2ElmerSolverUtils
              totElementsFound
 
   INTEGER, ALLOCATABLE :: commElementId(:), elemPerNode(:)
-  LOGICAL, ALLOCATABLE :: commMaterial(:), commBody(:)
+  LOGICAL, ALLOCATABLE :: commMaterial(:), commBody(:), commBodyForce(:)
   REAL(KIND=dp), ALLOCATABLE :: commElementX(:), commElementY(:), commElementZ(:)
   TYPE(OFproc_t), ALLOCATABLE, TARGET :: OFp(:)
 
@@ -97,7 +97,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   CHARACTER(LEN=MAX_NAME_LEN) :: VarName
   INTEGER :: i, j, k, n, ierr, OFstatus
   LOGICAL :: Found, Flag
-  TYPE(ValueList_t), POINTER :: Material
+  TYPE(ValueList_t), POINTER :: Material, BodyForce
   TYPE(ValueListEntry_t), POINTER :: ptrVar
   TYPE(Element_t), POINTER :: Element
   LOGICAL, SAVE :: VISITED = .FALSE.
@@ -125,14 +125,17 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     ALLOCATE(OFVarNames(nVars))
     ALLOCATE(commMaterial(CurrentModel % NumberOfMaterials))
     ALLOCATE(commBody(CurrentModel % NumberOfBodies))
+    ALLOCATE(commBodyForce(CurrentModel % NumberOfBodyForces))
 
     commMaterial = .FALSE.
     commBody = .FALSE.
+    commBodyForce = .FALSE.
 
     DO i=1,nVars
       VarName = ListGetString( Params, 'Target Variable '//TRIM(I2S(i)), Found )
 
       ! Find variables, materials and bodies that need to be communicated with OF
+      CALL Info('OpenFOAM2ElmerSolver','Checking materials..',Level=3)
       DO j=1,CurrentModel % NumberOfMaterials
         Material => CurrentModel % Materials(j) % Values
         ptrVar => ListFind( Material, VarName, Found )
@@ -140,10 +143,6 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
           IF (ptrVar%DepNameLen==0) CYCLE
           Var => VariableGet(CurrentModel % Mesh % Variables, ptrVar%DependName  )
           IF(ASSOCIATED( Var ) ) THEN
-            ! Name of communicated variable
-            OFVarNames(i) = ptrVar%DependName
-            CALL Info('OpenFOAM2ElmerSolver','Interpolated variable: '//OFVarNames(i),Level=3)
-
             ! Material that has to be communicated
             commMaterial(j) = .TRUE.
             CALL Info('OpenFOAM2ElmerSolver','Material: '//TRIM(I2S(j)),Level=3)
@@ -156,9 +155,40 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
               END IF
             END DO ! NumberOfBodies
             EXIT
-          END IF
+          END IF ! Associated
         END IF
       END DO ! NumberOfMaterials
+
+      ! Communicated variable also can be body force
+      IF(.NOT.Found ) THEN
+      CALL Info('OpenFOAM2ElmerSolver','Checking body forces..',Level=3)
+        DO j=1,CurrentModel % NumberOfBodyForces
+          BodyForce => CurrentModel % BodyForces(j) % Values
+          ptrVar => ListFind( BodyForce, VarName, Found )
+          IF(Found) THEN
+            IF (ptrVar%DepNameLen==0) CYCLE
+            Var => VariableGet(CurrentModel % Mesh % Variables, ptrVar%DependName  )
+            IF(ASSOCIATED( Var ) ) THEN
+              ! Body force that has to be communicated
+              commBodyForce(j) = .TRUE.
+              CALL Info('OpenFOAM2ElmerSolver','Body Force: '//TRIM(I2S(j)),Level=3)
+
+              ! Bodies that have to be communicated
+              DO k=1,CurrentModel % NumberOfBodies
+                IF (j==ListGetInteger( CurrentModel % Bodies(k) % Values, 'Body Force')) THEN
+                  commBody(k) = .TRUE.
+                  CALL Info('OpenFOAM2ElmerSolver','Body: '//TRIM(I2S(k)),Level=3)
+                END IF
+              END DO ! NumberOfBodies
+              EXIT
+            END IF ! Associated
+          END IF
+        END DO ! NumberOfBodyForces
+      END IF
+
+      ! Name of communicated variable
+      OFVarNames(i) = ptrVar%DependName
+      CALL Info('OpenFOAM2ElmerSolver','Interpolated variable: '//OFVarNames(i),Level=3)
 
       ! Test that the variable exists in the primary mesh
       IF(.NOT. ASSOCIATED( Var ) ) THEN
@@ -321,6 +351,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   ! Receive fields
   DO j=1,nVars
     VarName = OFVarNames(j)
+    CALL Info('OpenFOAM2ElmerSolver','Receiving: '//VarName,Level=3)
     Var => VariableGet(CurrentModel % Mesh % Variables, VarName )
     Var % Values = 0
 
@@ -335,7 +366,9 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       IF ( OFp(i) % nFoundElements > 0 ) THEN
         CALL MPI_WAIT( OFp(i) % reqRecv, MPI_STATUS_IGNORE, ierr)
 
-        WHERE (OFp(i) % recvValues<EPSILON(OFp(i) % recvValues)) ! Fix floating point exception
+        ! Fix floating point exception
+        WHERE (OFp(i) % recvValues<EPSILON(OFp(i) % recvValues) &
+                         .AND. OFp(i) % recvValues > -EPSILON(OFp(i) % recvValues))
           OFp(i) % recvValues = 0
         END WHERE
 
