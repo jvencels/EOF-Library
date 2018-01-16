@@ -24,8 +24,8 @@
 !/******************************************************************************
 ! *
 ! *  Authors: Juris Vencels, Peter Råback 
-! *  Email:   juris.vencels@gmail.com
-! *  Web:     http://vencels.com
+! *  Email:   juris.vencels@lu.lv
+! *  Web:     http://eof-library.com
 ! *  Address: University of Latvia
 ! *           Laboratory for mathematical modelling of 
 ! *               environmental and technological processes

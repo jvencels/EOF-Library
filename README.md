@@ -1,9 +1,11 @@
-# EOF-Library
-Libraries for OpenFOAM and Elmer MPI coupling + test cases. Used for solving coupled electromagnetic induction and MHD problems. This software is developed at Laboratory for mathematical modelling of environmental and technological processes (University of Latvia). 
+# EOF-Library (http://EOF-Library.com)
+Libraries for coupling Elmer and OpenFOAM + test cases. Used for solving coupled problems, e.g., electromagnetic induction and MHD. This software is maintained by the *Laboratory for mathematical modelling of environmental and technological processes* (University of Latvia) in cooperation with *CSC - IT Center for Science Ltd.* (Finland).
 
 ## Requirements ##
-Tested on Ubuntu 14.04 and Ubuntu 16.04.
-You will need `git`, `cmake`, `gfortran`, `blas` and `lapack`. 
+* Tested on Ubuntu 14.04 and Ubuntu 16.04.
+* Currently supported **OpenFOAM** version is **5.0**!
+* Both Elmer and OpenFOAM must use the same OpenMPI version
+* You will need `git`, `cmake`, `gfortran`, `blas` and `lapack`. 
 
 ```
 sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
@@ -11,15 +13,15 @@ sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
 
 ## How to ##
 
-* Download, install and configure OpenFOAM (http://openfoam.org/download/4-1-ubuntu/)
-* Download Elmer (https://github.com/jvencels/elmerfem.git). You also can obtain it from developers repo (https://github.com/ElmerCSC/elmerfem) without any guarantee that coupling will work. Alternately, Elmer could be installed from launchpad (https://launchpad.net/~elmer-csc-ubuntu/+archive/ubuntu/elmer-csc-ppa). This has been verified to work in Ubuntu 16.04 with OpenFOAM_Elmer software.
+* Download, install and configure OpenFOAM (https://openfoam.org/version/5-0/)
+* Download Elmer (https://github.com/jvencels/elmerfem.git). You also can obtain it from developers repo (https://github.com/ElmerCSC/elmerfem) without any guarantee that coupling will work. Alternately, Elmer could be installed from launchpad (https://launchpad.net/~elmer-csc-ubuntu/+archive/ubuntu/elmer-csc-ppa). This has been verified to work in Ubuntu 16.04 with EOF-Library software.
 
 * Configure and compile Elmer with `-DWITH_MPI=TRUE` by following these steps (https://www.csc.fi/web/elmer/sources-and-compilation).
 
 * Download modified OpenFOAM libraries, solvers and tests:
 
 ```
-git clone https://github.com/jvencels/OpenFOAM_Elmer.git
+git clone https://github.com/jvencels/EOF-Library
 ```
 * Add this line to `.bashrc`
 ```
@@ -33,7 +35,7 @@ mpirun --version
 * Compile libraries and solver
 
 ```
-cd OpenFOAM_Elmer/libs/commSplit
+cd EOF-Library/libs/commSplit
 wmake
 cd ../coupleElmer
 wmake
