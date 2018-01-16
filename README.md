@@ -3,7 +3,7 @@ Libraries for coupling Elmer and OpenFOAM + test cases. Used for solving coupled
 
 ## Requirements ##
 * Tested on Ubuntu 14.04 and Ubuntu 16.04.
-* Currently supported **OpenFOAM** version is **5.0**!
+* Currently supported **OpenFOAM** version **5.0**. We suggest to compile it from the source code since compiled version from repositories can be incompatible. 
 * Both Elmer and OpenFOAM must use the same OpenMPI version
 * You will need `git`, `cmake`, `gfortran`, `blas` and `lapack`. 
 
@@ -13,7 +13,7 @@ sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
 
 ## How to ##
 
-* Download, install and configure OpenFOAM (https://openfoam.org/version/5-0/)
+* Download OpenFOAM 5.0 source code, configure and compile it (https://openfoam.org/download/5-0-source/)
 * Download Elmer (https://github.com/jvencels/elmerfem.git). You also can obtain it from developers repo (https://github.com/ElmerCSC/elmerfem) without any guarantee that coupling will work. Alternately, Elmer could be installed from launchpad (https://launchpad.net/~elmer-csc-ubuntu/+archive/ubuntu/elmer-csc-ppa). This has been verified to work in Ubuntu 16.04 with EOF-Library software.
 
 * Configure and compile Elmer with `-DWITH_MPI=TRUE` by following these steps (https://www.csc.fi/web/elmer/sources-and-compilation).
