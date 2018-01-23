@@ -33,16 +33,14 @@ Description
 
     Turbulence modelling is generic, i.e. laminar, RAS or LES may be selected.
 
-    Thermal solver taken from Qingming Liu:
-    http://www.tfd.chalmers.se/~hani/kurser/OS_CFD_2011/QingmingLiu/Project_QingmingLIU-final.pdf
+-------------------------------------------------------------------------------
 
-Authors:   Juris Vencels
-Email:     juris.vencels@gmail.com
-Web:       http://vencels.com
-Address:   University of Latvia
-           Laboratory for mathematical modelling of 
-               environmental and technological processes
-           Zellu Str. 23, Riga, LV-1002, Latvia
+Ogirinal interFoam solver is part of OpenFOAM
+
+Thermal solver taken from Qingming Liu:
+http://www.tfd.chalmers.se/~hani/kurser/OS_CFD_2011/QingmingLiu/Project_QingmingLIU-final.pdf
+
+Modified by: Juris Vencels
 
 \*---------------------------------------------------------------------------*/
 

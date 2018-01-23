@@ -32,13 +32,11 @@ Description
     - turbulence modelling, i.e. laminar, RAS or LES
     - run-time selectable MRF and finite volume options, e.g. explicit porosity
 
-Authors:   Juris Vencels
-Email:     juris.vencels@gmail.com
-Web:       http://vencels.com
-Address:   University of Latvia
-           Laboratory for mathematical modelling of 
-               environmental and technological processes
-           Zellu Str. 23, Riga, LV-1002, Latvia
+-------------------------------------------------------------------------------
+
+Ogirinal pimpleFoam solver is part of OpenFOAM
+
+Modified by: Juris Vencels
 
 \*---------------------------------------------------------------------------*/
 

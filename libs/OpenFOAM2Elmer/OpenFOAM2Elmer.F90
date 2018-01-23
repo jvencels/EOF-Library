@@ -1,35 +1,30 @@
-!/*****************************************************************************/
+! *****************************************************************************/
+! * Copyright (C) 2016-2018 University of Latvia
+! *****************************************************************************/
+! * License
+! *    This file is part of EOF-Library.
 ! *
-! *  Elmer, A Finite Element Software for Multiphysical Problems
+! *    EOF-Library is free software: you can redistribute it and/or modify it
+! *    under the terms of the GNU General Public License as published by
+! *    the Free Software Foundation, either version 3 of the License, or
+! *    (at your option) any later version.
 ! *
-! *  Copyright 1st April 1995 - , CSC - IT Center for Science Ltd., Finland
-! * 
-! *  This program is free software; you can redistribute it and/or
-! *  modify it under the terms of the GNU General Public License
-! *  as published by the Free Software Foundation; either version 2
-! *  of the License, or (at your option) any later version.
-! * 
-! *  This program is distributed in the hope that it will be useful,
-! *  but WITHOUT ANY WARRANTY; without even the implied warranty of
-! *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-! *  GNU General Public License for more details.
+! *    EOF-Library is distributed in the hope that it will be useful, but WITHOUT
+! *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+! *    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+! *    for more details.
 ! *
-! *  You should have received a copy of the GNU General Public License
-! *  along with this program (in file fem/GPL-2); if not, write to the 
-! *  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, 
-! *  Boston, MA 02110-1301, USA.
+! *    You should have received a copy of the GNU General Public License
+! *    along with EOF-Library.  If not, see <http://www.gnu.org/licenses/>.
 ! *
 ! *****************************************************************************/
-!
-!/******************************************************************************
 ! *
-! *  Authors: Juris Vencels, Peter Råback 
+! *  Authors: Juris Vencels (University of Latvia)
+! *           Peter Råback (CSC - IT Center for Science, Finland)
+! *  
 ! *  Email:   juris.vencels@lu.lv
+! *  
 ! *  Web:     http://eof-library.com
-! *  Address: University of Latvia
-! *           Laboratory for mathematical modelling of 
-! *               environmental and technological processes
-! *           Zellu Str. 23, Riga, LV-1002, Latvia
 ! *
 ! *  Original Date: 21.12.2016
 ! *
