@@ -99,14 +99,14 @@ int main(int argc, char *argv[])
     // Receive fields from Elmer
     Elmer receiving(mesh,-1); // 1=send, -1=receive
     receiving.sendStatus(1); // 1=ok, 0=lastIter, -1=error
-    receiving.recvVector(JxB);
-    JxB *= alpha1;
-    receiving.recvScalar(JH);
-    JH *= alpha1;
-    JH.field() = max(JH.field(),scalar(0));
+    receiving.recvVector(JxB_recv);
+    receiving.recvScalar(JH_recv);
 
     while (runTime.run())
     {
+        JxB = JxB_recv*alpha1;
+        JH = JH_recv*alpha1;
+
         #include "readTimeControls.H"
 
         if (LTS)
@@ -180,11 +180,8 @@ int main(int argc, char *argv[])
 
             // Receive fields form Elmer
             receiving.sendStatus(runTime.run());
-            receiving.recvVector(JxB);
-            JxB *= alpha1f;
-            receiving.recvScalar(JH);
-            JH *= alpha1f;
-            JH.field() = max(JH.field(),scalar(0));
+            receiving.recvVector(JxB_recv);
+            receiving.recvScalar(JH_recv);
 
             Info<< "Elmer2OpenFOAM = " << MPI_Wtime()-commTime << " s" << nl << endl;
         }

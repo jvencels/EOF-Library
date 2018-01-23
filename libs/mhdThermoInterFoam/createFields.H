@@ -42,6 +42,20 @@ volVectorField JxB
     mesh
 );
 
+Info<< "Initializing field JxB_recv\n" << endl;
+volVectorField JxB_recv
+(
+    IOobject
+    (
+        "JxB_recv",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    JxB
+);
+
 Info<< "Initializing field elcond\n" << endl;
 volScalarField elcond
 (
@@ -50,10 +64,11 @@ volScalarField elcond
         "elcond",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
-    mesh
+    mesh,
+	dimensionedScalar("zero", dimless, 0)
 );
 
 Info<< "Initializing field T\n" << endl;
@@ -85,6 +100,20 @@ volScalarField JH
     mesh
 );
 
+Info<< "Initializing field JH_recv\n" << endl;
+volScalarField JH_recv
+(
+    IOobject
+    (
+        "JH_recv",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    JH
+);
+
 Info<< "Initializing field alpha_old\n" << endl;
 volScalarField alpha_old
 (
@@ -93,10 +122,11 @@ volScalarField alpha_old
         "alpha_old",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
-    mesh
+    mesh,
+	dimensionedScalar("zero", dimless, 0)
 );
 
 #include "createPhi.H"
