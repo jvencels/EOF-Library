@@ -175,7 +175,6 @@ mode_(mode)
             ELp[i].sendBuffer1 = new (std::nothrow) double[ELp[i].nElem];
             ELp[i].sendBuffer2 = new (std::nothrow) double[ELp[i].nElem];
             ELp[i].foundElement = new (std::nothrow) label[ELp[i].nElem];
-            ELp[i].positions = new (std::nothrow) point[ELp[i].nElem];
         }
         for ( i=0; i<totElmerRanks; i++ ) {
             MPI_Recv(ELp[i].sendBuffer0, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 899, 
@@ -194,22 +193,28 @@ mode_(mode)
         for ( i=0; i<totElmerRanks; i++ ) {
             ELp[i].nFoundElements = 0;
             for ( j=0; j<ELp[i].nElem; j++ ) {
-                ELp[i].positions[j].x() = ELp[i].sendBuffer0[j];
-                ELp[i].positions[j].y() = ELp[i].sendBuffer1[j];
-                ELp[i].positions[j].z() = ELp[i].sendBuffer2[j];
-                ELp[i].foundElement[j] = mesh.findCell(ELp[i].positions[j]);
-                if (ELp[i].foundElement[j] != -1) ELp[i].nFoundElements++;
+                point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
+
+                ELp[i].foundElement[j] = mesh.findCell(tmpPoint);
+                if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
             }
             Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
-            ELp[i].foundElementIndx = new (std::nothrow) int[ELp[i].nFoundElements];
             MPI_Send(&ELp[i].nFoundElements, 1, MPI_INTEGER, ELp[i].globalRank, 899, MPI_COMM_WORLD);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
             if (ELp[i].nFoundElements > 0) {
+                ELp[i].foundElementIndx = new (std::nothrow) int[ELp[i].nFoundElements];
+                ELp[i].foundElementCellIndx = new (std::nothrow) int[ELp[i].nFoundElements];
+                ELp[i].positions = new (std::nothrow) point[ELp[i].nFoundElements];
+
                 k = 0;
                 for ( j=0; j<ELp[i].nElem; j++ ) {
-                    if (ELp[i].foundElement[j] != -1) {
+                    if (ELp[i].foundElement[j] > -1) {
                         ELp[i].foundElementIndx[k] = j;
+                        ELp[i].foundElementCellIndx[k] = ELp[i].foundElement[j];
+                        ELp[i].positions[k].x() = ELp[i].sendBuffer0[j];
+                        ELp[i].positions[k].y() = ELp[i].sendBuffer1[j];
+                        ELp[i].positions[k].z() = ELp[i].sendBuffer2[j];
                         k++;
                     }
                 }
@@ -281,7 +286,7 @@ void Foam::Elmer::sendScalar(volScalarField& field)
         if ( ELp[i].nFoundElements > 0 ) {
             for (j=0; j<ELp[i].nFoundElements; j++) {
                 ELp[i].sendBuffer0[j] = interpField->
-                       interpolate(ELp[i].positions[j], ELp[i].foundElement[ELp[i].foundElementIndx[j]]);
+                       interpolate(ELp[i].positions[j], ELp[i].foundElementCellIndx[j]);
             }
             MPI_Send(ELp[i].sendBuffer0, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank, 
                       900, MPI_COMM_WORLD);
@@ -302,7 +307,7 @@ void Foam::Elmer::sendVector(volVectorField& field)
         if ( ELp[i].nFoundElements > 0 ) {
             for (j=0; j<ELp[i].nFoundElements; j++) {
                 vector tmpVector = interpField->
-                       interpolate(ELp[i].positions[j], ELp[i].foundElement[ELp[i].foundElementIndx[j]]);
+                       interpolate(ELp[i].positions[j], ELp[i].foundElementCellIndx[j]);
                 ELp[i].sendBuffer0[j] = tmpVector.component(0);
                 ELp[i].sendBuffer1[j] = tmpVector.component(1);
                 ELp[i].sendBuffer2[j] = tmpVector.component(2);

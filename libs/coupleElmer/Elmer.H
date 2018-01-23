@@ -96,6 +96,7 @@ public:
                 double *sendBuffer0, *sendBuffer1, *sendBuffer2;
                 label *foundElement;
                 int *foundElementIndx;
+                int *foundElementCellIndx;
 		        int nFoundElements;
                 point *positions;
         };
