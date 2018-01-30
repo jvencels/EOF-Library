@@ -40,6 +40,12 @@ solvers
         relTol          0;
     }
 
+    pcorrFinal
+    {
+        $pcorr;
+        relTol          0;
+    }
+
     p_rgh
     {
         solver          PCG;

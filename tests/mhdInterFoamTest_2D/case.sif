@@ -6,7 +6,7 @@ Header
 End
 
 Simulation
-  Max Output Level = 3
+  Max Output Level = 10
   Coordinate System = Cartesian
   Angular Frequency = $2*pi*1000
 
@@ -17,7 +17,7 @@ Simulation
 
   Solver Input File = case.sif
   Post File = case.vtu
-  Output Intervals(1) = 0
+  Output Intervals(1) = 1
 End
 
 Constants
@@ -59,7 +59,7 @@ Solver 1
   Equation = OpenFOAM2Elmer
   Procedure = "OpenFOAM2Elmer" "OpenFOAM2ElmerSolver"
 
-  Target Variable 1 = String "Electric Conductivity"
+  Target Variable 1 = String "OF conductivity"
 End
 
 Solver 2
@@ -81,7 +81,8 @@ Solver 2
   Nonlinear System Convergence Tolerance = 1.0e-6
   Nonlinear System Relaxation Factor = 1
 
-  Exported Variable 1 = String "OF conductivity"
+  Exported Variable 1 = -elem "OF conductivity"
+  Exported Variable 1 Mask = String "material: mapping"
 End
 
 Solver 3
@@ -129,10 +130,11 @@ Material 1
 End
 
 Material 2
-  Name = "Conductor"
+  Name = "Melt"
   Electric Conductivity = Equals "OF conductivity"
   Relative Permittivity = 1
   Relative Permeability = 1
+  mapping = Logical True
 End
 
 Body Force 1

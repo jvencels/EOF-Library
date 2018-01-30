@@ -28,7 +28,7 @@ gradSchemes
 divSchemes
 {
     div(rhoPhi,U)  Gauss linear;
-    div(rhoPhiCp,T)  Gauss linear;
+    div(rhoPhi,T)  Gauss upwind;
     div(phi,alpha)  Gauss vanLeer;
     div(phirb,alpha) Gauss linear;
     div(phi,k)      Gauss upwind;
@@ -47,7 +47,7 @@ laplacianSchemes
 interpolationSchemes
 {
     default         linear;
-    elcond          cell;
+    elcond          cellPoint;
 }
 
 snGradSchemes

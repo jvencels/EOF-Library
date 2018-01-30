@@ -46,7 +46,7 @@ laplacianSchemes
 interpolationSchemes
 {
     default         linear;
-    elcond          cell;
+    elcond          cellPoint;
 }
 
 snGradSchemes
