@@ -56,15 +56,16 @@ MODULE OpenFOAM2ElmerSolverUtils
     REAL(KIND=dp),POINTER :: recvValues(:)
   END TYPE OFproc_t
 
-  CHARACTER(LEN=MAX_NAME_LEN), ALLOCATABLE ::   OFVarNames(:)
+  TYPE(VariableTable_t), ALLOCATABLE :: OFVarTable(:)
+!  CHARACTER(LEN=MAX_NAME_LEN), ALLOCATABLE ::   OFVarNames(:)
 
   INTEGER :: totOFRanks, OFRanksStart, ElmerRanksStart, myGlobalRank, &
              totGlobalRanks, myLocalRank, totLocalRanks, nVars, nElements, &
              totElementsFound
 
-  INTEGER, ALLOCATABLE :: commElementId(:), elemPerNode(:)
-  LOGICAL, ALLOCATABLE :: commMaterial(:), commBody(:), commBodyForce(:)
-  REAL(KIND=dp), ALLOCATABLE :: commElementX(:), commElementY(:), commElementZ(:)
+!  INTEGER, ALLOCATABLE :: commElementId(:), elemPerNode(:)
+!  LOGICAL, ALLOCATABLE :: commMaterial(:), commBody(:), commBodyForce(:)
+  REAL(KIND=dp), POINTER :: commElementX(:), commElementY(:), commElementZ(:)
   TYPE(OFproc_t), ALLOCATABLE, TARGET :: OFp(:)
 
 END MODULE OpenFOAM2ElmerSolverUtils
@@ -88,23 +89,30 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   ! local variables
   !------------------------------------------------------------------------------  
   TYPE(ValueList_t), POINTER :: Params
-  TYPE(Variable_t), POINTER :: Var
+  TYPE(Variable_t), POINTER :: Var, VarCoord 
   CHARACTER(LEN=MAX_NAME_LEN) :: VarName
-  INTEGER :: i, j, k, n, ierr, OFstatus
+  INTEGER :: i, j, k, l, n, ierr, OFstatus
   LOGICAL :: Found, Flag
-  TYPE(ValueList_t), POINTER :: Material, BodyForce
-  TYPE(ValueListEntry_t), POINTER :: ptrVar
+!  TYPE(ValueList_t), POINTER :: Material, BodyForce
+!  TYPE(ValueListEntry_t), POINTER :: ptrVar
   TYPE(Element_t), POINTER :: Element
-  LOGICAL, SAVE :: VISITED = .FALSE.
-
+ 
+  TYPE(Mesh_t), POINTER :: Mesh
+  LOGICAL :: Visited = .FALSE., UserDefinedCoordinates 
+  
+  SAVE Visited, Mesh
+  
+  
   !------------------------------------------------------------------------------  
 
   CALL Info('OpenFOAM2ElmerSolver','-----------------------------------------', Level=4 )
 
-  IF (.NOT. VISITED) THEN
-    ! The variable containing the field contributions
-    !--------------------------------------------------------------------------
-    Params => GetSolverParams()
+  ! The variable containing the field contributions
+  !--------------------------------------------------------------------------
+  Params => GetSolverParams()
+  Mesh => GetMesh()
+
+  IF(.NOT. Visited ) THEN
 
     nVars = 0
     DO i=1,100
@@ -116,83 +124,32 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
         nVars = nVars + 1
       END IF
     END DO
-
-    ALLOCATE(OFVarNames(nVars))
-    ALLOCATE(commMaterial(CurrentModel % NumberOfMaterials))
-    ALLOCATE(commBody(CurrentModel % NumberOfBodies))
-    ALLOCATE(commBodyForce(CurrentModel % NumberOfBodyForces))
-
-    commMaterial = .FALSE.
-    commBody = .FALSE.
-    commBodyForce = .FALSE.
-
+    
+    ALLOCATE(OFVarTable(nVars))
     DO i=1,nVars
       VarName = ListGetString( Params, 'Target Variable '//TRIM(I2S(i)), Found )
-
-      ! Find variables, materials and bodies that need to be communicated with OF
-      CALL Info('OpenFOAM2ElmerSolver','Checking materials..',Level=3)
-      DO j=1,CurrentModel % NumberOfMaterials
-        Material => CurrentModel % Materials(j) % Values
-        ptrVar => ListFind( Material, VarName, Found )
-        IF(Found) THEN
-          IF (ptrVar%DepNameLen==0) CYCLE
-          Var => VariableGet(CurrentModel % Mesh % Variables, ptrVar%DependName  )
-          IF(ASSOCIATED( Var ) ) THEN
-            ! Material that has to be communicated
-            commMaterial(j) = .TRUE.
-            CALL Info('OpenFOAM2ElmerSolver','Material: '//TRIM(I2S(j)),Level=3)
-
-            ! Bodies that have to be communicated
-            DO k=1,CurrentModel % NumberOfBodies
-              IF (j==ListGetInteger( CurrentModel % Bodies(k) % Values, 'Material')) THEN
-                commBody(k) = .TRUE.
-                CALL Info('OpenFOAM2ElmerSolver','Body: '//TRIM(I2S(k)),Level=3)
-              END IF
-            END DO ! NumberOfBodies
-            EXIT
-          END IF ! Associated
-        END IF
-      END DO ! NumberOfMaterials
-
-      ! Communicated variable also can be body force
-      IF(.NOT.Found ) THEN
-      CALL Info('OpenFOAM2ElmerSolver','Checking body forces..',Level=3)
-        DO j=1,CurrentModel % NumberOfBodyForces
-          BodyForce => CurrentModel % BodyForces(j) % Values
-          ptrVar => ListFind( BodyForce, VarName, Found )
-          IF(Found) THEN
-            IF (ptrVar%DepNameLen==0) CYCLE
-            Var => VariableGet(CurrentModel % Mesh % Variables, ptrVar%DependName  )
-            IF(ASSOCIATED( Var ) ) THEN
-              ! Body force that has to be communicated
-              commBodyForce(j) = .TRUE.
-              CALL Info('OpenFOAM2ElmerSolver','Body Force: '//TRIM(I2S(j)),Level=3)
-
-              ! Bodies that have to be communicated
-              DO k=1,CurrentModel % NumberOfBodies
-                IF (j==ListGetInteger( CurrentModel % Bodies(k) % Values, 'Body Force')) THEN
-                  commBody(k) = .TRUE.
-                  CALL Info('OpenFOAM2ElmerSolver','Body: '//TRIM(I2S(k)),Level=3)
-                END IF
-              END DO ! NumberOfBodies
-              EXIT
-            END IF ! Associated
-          END IF
-        END DO ! NumberOfBodyForces
-      END IF
-
-      ! Name of communicated variable
-      OFVarNames(i) = ptrVar%DependName
-      CALL Info('OpenFOAM2ElmerSolver','Interpolated variable: '//OFVarNames(i),Level=3)
-
-      ! Test that the variable exists in the primary mesh
+      Var => VariableGet( Mesh % Variables, varName, ThisOnly = .TRUE. )
       IF(.NOT. ASSOCIATED( Var ) ) THEN
-        CALL Fatal('OpenFOAM2ElmerSolver','Variable does not exist in Elmer mesh!')
+        CALL Fatal('OpenFOAM2ElmerSolver','Variable does not exist in Elmer mesh: '//TRIM(VarName))
       END IF
-    END DO ! nVars
+      OFVarTable(i) % Variable => Var
+    END DO
+    
+    CALL Info('OpenFOAM2ElmerSolver','Number of target variables: '//TRIM(I2S(nVars)),Level=5)
 
-    CALL Info('OpenFOAM2ElmerSolver','Number of target variables: '//TRIM(I2S(nVars)),Level=3)
-
+    ! We can map variables that exist on nodal points, center points, or gauss points.
+    ! However, the size and type of variables must be the same
+    Var => OFVarTable(1) % Variable
+    DO j=1,nVars
+      IF( OFVarTable(j) % Variable % TYPE /= Var % TYPE ) THEN
+        CALL Fatal('OpenFOAM2ElmerSolver','Currently it is assumed that all variables are of same type!')   
+      END IF
+      IF( SIZE( OFVarTable(j) % Variable % Values ) /= SIZE( Var % Values ) ) THEN
+        CALL Fatal('OpenFOAM2ElmerSolver','Currently it is assumed that all variables are of same size!')   
+      END IF
+    END DO
+  
+  
     ! MPI coupling
     !------------------------------------------------------------------------
     myLocalRank   = ParEnv % MyPE
@@ -209,9 +166,9 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     CALL MPI_ALLREDUCE(myGlobalRank, ElmerRanksStart, 1, MPI_INTEGER, MPI_MIN, ELMER_COMM_WORLD, ierr)
 
     IF (ElmerRanksStart==0) THEN
-       OFRanksStart = totLocalRanks
+      OFRanksStart = totLocalRanks
     ELSE
-       OFRanksStart = 0
+      OFRanksStart = 0
     END IF
 
     CALL Info('OpenFOAM2ElmerSolver', 'Allocating OpenFOAM data structures',Level=3)
@@ -223,48 +180,83 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     END DO
 
 
-    ! Count elements that need to be communicated
-    !------------------------------------------------------------------------
-    nElements = 0
-    VarName = ListGetString( Params, 'Target Variable 1', Found )
-    ptrVar => ListFind( Material, VarName, Found )
-    DO i = 1, GetNOFActive()
-      Element => GetActiveElement(i)
-      IF (commBody(Element % BodyId)) nElements = nElements + 1
-    END DO
+    ! Here we assume that the variable that we are looking for is always of proper size
+    ! specified by the 1st variable to be interpolated.
+    nElements = size( Var % Values )
 
-    ! Get element Id's and cell centres
-    !------------------------------------------------------------------------
-    IF (nElements>0) THEN
-      ALLOCATE( commElementId(nElements), &
-                commElementX(nElements),  &
-                commElementY(nElements),  &
-                commElementZ(nElements), &
-                elemPerNode(CurrentModel % Mesh % NumberOfNodes) )
-      elemPerNode = 0
 
-      j = 0
-      DO i = 1, GetNOFActive()
-        Element => GetActiveElement(i)
-        IF (commBody(Element % BodyId)) THEN
-          j = j+1
-          commElementId(j) = i
+    VarName = ListGetString( Params,'Interpolate Coordinate', UserDefinedCoordinates ) 
+    
+    IF( UserDefinedCoordinates ) THEN
+      CALL Info('OpenFOAM2ElmerSolver','Using precomputed coordinates for interpolation')      
+      
+      VarCoord => VariableGet( Mesh % Variables, VarName )
+      IF( .NOT. ASSOCIATED( VarCoord ) ) THEN
+        VarCoord => VariableGet( Mesh % Variables,"ip coordinate" )
+      END IF
+      IF( .NOT. ASSOCIATED( VarCoord ) ) THEN
+        CALL Fatal('OpenFOAM2ElmerSolver','Missing >Interpolate Coordinate< needed for IPs')
+      END IF
+      IF( SIZE( VarCoord % Values ) / 3  /= nElements ) THEN
+        CALL Fatal('OpenFOAM2ElmerSolver','Size of coordinates should match size of variable x 3!')
+      END IF
+      commElementX => VarCoord % Values(1::3)
+      commElementY => VarCoord % Values(2::3)
+      commElementZ => VarCoord % Values(3::3)
+
+    ELSE IF (nElements > 0) THEN
+      CALL Info('OpenFOAM2ElmerSolver','Allocating coordinates for interpolation')
+
+      ALLOCATE( commElementX(nElements),  &
+          commElementY(nElements),  &
+          commElementZ(nElements) )
+
+      IF( Var % TYPE == Variable_on_nodes ) THEN
+
+        ! Set coordinates for nodal interpolation
+        ! Note that these are ordered such that f_i related to (x,y,z)_i 
+        !------------------------------------------------------------------------
+        DO i = 1, Mesh % NumberOfNodes 
+          j = Var % Perm( i )
+          IF( j > 0 ) THEN
+            commElementX(j) = Mesh % Nodes % x(i)
+            commElementY(j) = Mesh % Nodes % y(i)
+            commElementZ(j) = Mesh % Nodes % z(i)            
+          END IF
+        END DO
+
+      ELSE IF( Var % TYPE == Variable_on_elements ) THEN
+
+        ! Set coordinates for elemental interpolation
+        ! Note that these are ordered such that f_i related to (x,y,z)_i 
+        !------------------------------------------------------------------------
+        DO i = 1, Mesh % NumberOfBulkElements + Mesh % NumberOfBoundaryElements
+          Element => Mesh % Elements(i)
           n = Element % TYPE % NumberOfNodes
-          commElementX(j) = SUM( CurrentModel % Mesh % Nodes % x( Element % NodeIndexes ) ) / n
-          commElementY(j) = SUM( CurrentModel % Mesh % Nodes % y( Element % NodeIndexes ) ) / n
-          commElementZ(j) = SUM( CurrentModel % Mesh % Nodes % z( Element % NodeIndexes ) ) / n
-          elemPerNode( Element % NodeIndexes ) = elemPerNode( Element % NodeIndexes ) +1
-        END IF
-      END DO
+          j = Var % Perm( Element % ElementIndex )          
+          IF( j > 0 ) THEN
+            commElementX(j) = SUM( Mesh % Nodes % x( Element % NodeIndexes ) ) / n
+            commElementY(j) = SUM( Mesh % Nodes % y( Element % NodeIndexes ) ) / n
+            commElementZ(j) = SUM( Mesh % Nodes % z( Element % NodeIndexes ) ) / n
+          END IF
+        END DO
+
+      ELSE IF( Var % TYPE == Variable_on_gauss_points ) THEN
+        CALL Fatal('OpenFOAM2ElmerSolver','Coordinates for gauss point interpolation not given')
+
+      ELSE 
+        CALL Fatal('OpenFOAM2ElmerSolver','Unknown variable type to create interpolation coordinates')      
+      END IF
     END IF
+
 
     ! Starting communication
     !------------------------------------------------------------------------
 
     DO i = 0, totOFRanks - 1
       ! Number of Elmer elements
-       CALL MPI_ISEND(nElements, 1, MPI_INTEGER, &
-                      OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
+      CALL MPI_ISEND(nElements, 1, MPI_INTEGER, &
+          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
@@ -272,7 +264,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
       ! Element X coords
       CALL MPI_ISEND(commElementX, nElements, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
+          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
@@ -280,7 +272,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
       ! Element Y coords
       CALL MPI_ISEND(commElementY, nElements, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
+          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
@@ -288,7 +280,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
       ! Element Z coords
       CALL MPI_ISEND(commElementZ, nElements, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
+          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
@@ -296,7 +288,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
       ! Number of found elements
       CALL MPI_IRECV(OFp(i) % nFoundElements, 1, MPI_INTEGER, &
-                     OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
+          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
     END DO
 
     totElementsFound = 0
@@ -306,10 +298,10 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       IF (OFp(i) % nFoundElements>0) THEN
         totElementsFound = totElementsFound + OFp(i) % nFoundElements
         ALLOCATE ( OFp(i) % foundElementIndx(OFp(i) % nFoundElements), &
-                   OFp(i) % recvValues(OFp(i) % nFoundElements))
+            OFp(i) % recvValues(OFp(i) % nFoundElements))
         ! Indexes of found elements
         CALL MPI_IRECV(OFp(i) % foundElementIndx, OFp(i) % nFoundElements, MPI_INTEGER, &
-                       OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
+            OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
       END IF
     END DO
 
@@ -326,7 +318,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       END IF
     END DO
 
-  END IF ! .NOT. VISITED
+  END IF ! Visited
 
   ! Receive simulation status
   CALL MPI_IRECV( OFstatus, 1, MPI_INTEGER, OFp(0) % globalRank, 799, MPI_COMM_WORLD, OFp(0) % reqRecv, ierr)
@@ -345,9 +337,9 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
   ! Receive fields
   DO j=1,nVars
-    VarName = OFVarNames(j)
-    CALL Info('OpenFOAM2ElmerSolver','Receiving: '//VarName,Level=3)
-    Var => VariableGet(CurrentModel % Mesh % Variables, VarName )
+    Var => OFVarTable(j) % Variable 
+    CALL Info('OpenFOAM2ElmerSolver','Receiving: '//TRIM(Var % name),Level=5)
+    
     Var % Values = 0
 
     DO i = 0, totOFRanks - 1
@@ -367,11 +359,12 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
           OFp(i) % recvValues = 0
         END WHERE
 
+        ! Directly interpolate to the points needed, don't reinterpolate
         DO k = 1, OFp(i) % nFoundElements
-          Element => GetActiveElement(commElementId(OFp(i) % foundElementIndx(k)))
-          Var % Values(Var % Perm(Element % NodeIndexes)) = Var % Values(Var % Perm(Element % NodeIndexes))&
-                 + OFp(i) % recvValues(k) / elemPerNode(Element % NodeIndexes)
+          l = OFp(i) % foundElementIndx(k)
+          Var % Values(l) = Ofp(i) % recvValues(k)
         END DO
+
       END IF
     END DO
   END DO
