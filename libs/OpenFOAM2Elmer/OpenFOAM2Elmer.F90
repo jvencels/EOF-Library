@@ -71,6 +71,24 @@ MODULE OpenFOAM2ElmerSolverUtils
 END MODULE OpenFOAM2ElmerSolverUtils
 
 !------------------------------------------------------------------------------
+SUBROUTINE MPI_TEST_SLEEP( req, ierr )
+
+  USE OpenFOAM2ElmerSolverUtils
+
+  IMPLICIT NONE
+  !------------------------------------------------------------------------------
+  INTEGER :: req, ierr
+  LOGICAL :: Flag
+
+  DO WHILE ( .TRUE. )
+    CALL MPI_TEST( req, Flag, MPI_STATUS_IGNORE, ierr )
+    IF (Flag) EXIT
+    CALL SLEEP(1)
+  END DO
+
+END SUBROUTINE MPI_TEST_SLEEP
+
+!------------------------------------------------------------------------------
 SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   
   USE DefUtils

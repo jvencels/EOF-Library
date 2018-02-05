@@ -60,7 +60,7 @@ END MODULE Elmer2OpenFOAMSolverUtils
 !------------------------------------------------------------------------------
 SUBROUTINE MPI_TEST_SLEEP( req, ierr )
 
-  USE OpenFOAM2ElmerSolverUtils
+  USE Elmer2OpenFOAMSolverUtils
 
   IMPLICIT NONE
   !------------------------------------------------------------------------------
