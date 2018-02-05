@@ -105,23 +105,23 @@ mode_(mode)
             MPI_Send(&nCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, MPI_COMM_WORLD);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
-            MPI_Send(cellCentres_x, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
+            MPI_Send(cellCentres_x, nCells, MPI_DOUBLE, ELp[i].globalRank, 998, MPI_COMM_WORLD);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
-            MPI_Send(cellCentres_y, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
+            MPI_Send(cellCentres_y, nCells, MPI_DOUBLE, ELp[i].globalRank, 997, MPI_COMM_WORLD);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
-            MPI_Send(cellCentres_z, nCells, MPI_DOUBLE, ELp[i].globalRank, 999, MPI_COMM_WORLD);
+            MPI_Send(cellCentres_z, nCells, MPI_DOUBLE, ELp[i].globalRank, 996, MPI_COMM_WORLD);
         }
 
         int totCellsFound = 0;
         for ( i=0; i<totElmerRanks; i++ ) {
             while ( true ) {
-                MPI_Iprobe(ELp[i].globalRank, 999, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+                MPI_Iprobe(ELp[i].globalRank, 995, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
                 if (flag) break;
                 nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
             }
-            MPI_Recv(&ELp[i].nFoundCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, 
+            MPI_Recv(&ELp[i].nFoundCells, 1, MPI_INTEGER, ELp[i].globalRank, 995, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             totCellsFound += ELp[i].nFoundCells;
         }
@@ -141,7 +141,7 @@ mode_(mode)
                 }
 
                 MPI_Recv(ELp[i].foundCellsIndx, ELp[i].nFoundCells, MPI_INTEGER,
-                          ELp[i].globalRank, 999, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                          ELp[i].globalRank, 994, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
         }
     }
@@ -175,17 +175,22 @@ mode_(mode)
             ELp[i].sendBuffer1 = new (std::nothrow) double[ELp[i].nElem];
             ELp[i].sendBuffer2 = new (std::nothrow) double[ELp[i].nElem];
             ELp[i].foundElement = new (std::nothrow) label[ELp[i].nElem];
+
+            if (ELp[i].sendBuffer0 == nullptr || ELp[i].sendBuffer1 == nullptr || 
+                ELp[i].sendBuffer2 == nullptr || ELp[i].foundElement == nullptr) {
+                FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError); 
+            }
         }
         for ( i=0; i<totElmerRanks; i++ ) {
-            MPI_Recv(ELp[i].sendBuffer0, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 899, 
+            MPI_Recv(ELp[i].sendBuffer0, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 898, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
-            MPI_Recv(ELp[i].sendBuffer1, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 899, 
+            MPI_Recv(ELp[i].sendBuffer1, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 897, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
-            MPI_Recv(ELp[i].sendBuffer2, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 899, 
+            MPI_Recv(ELp[i].sendBuffer2, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 896, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
 
@@ -199,13 +204,17 @@ mode_(mode)
                 if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
             }
             Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
-            MPI_Send(&ELp[i].nFoundElements, 1, MPI_INTEGER, ELp[i].globalRank, 899, MPI_COMM_WORLD);
+            MPI_Send(&ELp[i].nFoundElements, 1, MPI_INTEGER, ELp[i].globalRank, 895, MPI_COMM_WORLD);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
             if (ELp[i].nFoundElements > 0) {
                 ELp[i].foundElementIndx = new (std::nothrow) int[ELp[i].nFoundElements];
                 ELp[i].foundElementCellIndx = new (std::nothrow) int[ELp[i].nFoundElements];
                 ELp[i].positions = new (std::nothrow) point[ELp[i].nFoundElements];
+
+                if (ELp[i].foundElementIndx == nullptr || ELp[i].foundElementCellIndx == nullptr || ELp[i].positions == nullptr) {
+                    FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError); 
+                }
 
                 k = 0;
                 for ( j=0; j<ELp[i].nElem; j++ ) {
@@ -219,7 +228,7 @@ mode_(mode)
                     }
                 }
                 MPI_Send(ELp[i].foundElementIndx, ELp[i].nFoundElements, MPI_INTEGER, 
-                         ELp[i].globalRank, 899, MPI_COMM_WORLD);
+                         ELp[i].globalRank, 894, MPI_COMM_WORLD);
             }
         }
     }

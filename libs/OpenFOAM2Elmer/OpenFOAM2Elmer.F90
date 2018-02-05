@@ -92,6 +92,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   TYPE(Variable_t), POINTER :: Var, VarCoord 
   CHARACTER(LEN=MAX_NAME_LEN) :: VarName
   INTEGER :: i, j, k, l, n, ierr, OFstatus
+  INTEGER :: status(MPI_STATUS_SIZE)
   LOGICAL :: Found, Flag
 !  TYPE(ValueList_t), POINTER :: Material, BodyForce
 !  TYPE(ValueListEntry_t), POINTER :: ptrVar
@@ -261,47 +262,52 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
     DO i = 0, totOFRanks - 1
       ! Number of Elmer elements
-      CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
+      CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
       ! Element X coords
-      CALL MPI_ISEND(commElementX, nElements, MPI_DOUBLE, &
-          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
+      CALL MPI_SEND(commElementX, nElements, MPI_DOUBLE, &
+          OFp(i) % globalRank, 898, MPI_COMM_WORLD, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
       ! Element X coords
-      CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
+      !CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
       ! Element Y coords
-      CALL MPI_ISEND(commElementY, nElements, MPI_DOUBLE, &
-          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
+      CALL MPI_SEND(commElementY, nElements, MPI_DOUBLE, &
+          OFp(i) % globalRank, 897, MPI_COMM_WORLD, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
       ! Element Y coords
-      CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
+      !CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
       ! Element Z coords
-      CALL MPI_ISEND(commElementZ, nElements, MPI_DOUBLE, &
-          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
+      CALL MPI_SEND(commElementZ, nElements, MPI_DOUBLE, &
+          OFp(i) % globalRank, 896, MPI_COMM_WORLD, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
       ! Element Z coords
-      CALL MPI_WAIT( OFp(i) % reqSend, MPI_STATUS_IGNORE, ierr )
+      !CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
       ! Number of found elements
-      CALL MPI_IRECV(OFp(i) % nFoundElements, 1, MPI_INTEGER, &
-          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
+      DO WHILE ( .TRUE. )
+        CALL MPI_IPROBE( OFp(i) % globalRank, 895, MPI_COMM_WORLD, Flag, status, ierr)
+        IF (Flag) EXIT
+        CALL SLEEP(1)
+      END DO
+      CALL MPI_RECV(OFp(i) % nFoundElements, 1, MPI_INTEGER, &
+          OFp(i) % globalRank, 895, MPI_COMM_WORLD, status, ierr)
     END DO
 
     totElementsFound = 0
     DO i = 0, totOFRanks - 1
       ! Number of found elements
-      CALL MPI_WAIT( OFp(i) % reqRecv, MPI_STATUS_IGNORE, ierr )
+      !CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
       IF (OFp(i) % nFoundElements>0) THEN
         totElementsFound = totElementsFound + OFp(i) % nFoundElements
         ALLOCATE ( OFp(i) % foundElementIndx(OFp(i) % nFoundElements), &
             OFp(i) % recvValues(OFp(i) % nFoundElements))
         ! Indexes of found elements
         CALL MPI_IRECV(OFp(i) % foundElementIndx, OFp(i) % nFoundElements, MPI_INTEGER, &
-            OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
+            OFp(i) % globalRank, 894, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
       END IF
     END DO
 
@@ -313,7 +319,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     DO i = 0, totOFRanks - 1
       IF (OFp(i) % nFoundElements>0) THEN
         ! Indexes of found elements
-        CALL MPI_WAIT( OFp(i) % reqRecv, MPI_STATUS_IGNORE, ierr )
+        CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
         OFp(i) % foundElementIndx = OFp(i) % foundElementIndx + 1
       END IF
     END DO
@@ -322,12 +328,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
   ! Receive simulation status
   CALL MPI_IRECV( OFstatus, 1, MPI_INTEGER, OFp(0) % globalRank, 799, MPI_COMM_WORLD, OFp(0) % reqRecv, ierr)
-
-  DO WHILE ( .TRUE. )
-    CALL MPI_TEST( OFp(0) % reqRecv, Flag, MPI_STATUS_IGNORE, ierr )
-    IF (Flag) EXIT
-    CALL SLEEP(1)
-  END DO
+  CALL MPI_TEST_SLEEP(OFp(0) % reqRecv, ierr)
 
   IF (OFstatus.NE.1) THEN
     CALL Info('OpenFOAM2ElmerSolver','Elmer has last iteration!', Level=3 )
@@ -351,7 +352,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
     DO i = 0, totOFRanks - 1
       IF ( OFp(i) % nFoundElements > 0 ) THEN
-        CALL MPI_WAIT( OFp(i) % reqRecv, MPI_STATUS_IGNORE, ierr)
+        CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
 
         ! Fix floating point exception
         WHERE (OFp(i) % recvValues<EPSILON(OFp(i) % recvValues) &
