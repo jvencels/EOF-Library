@@ -73,9 +73,18 @@ END MODULE OpenFOAM2ElmerSolverUtils
 !------------------------------------------------------------------------------
 SUBROUTINE MPI_TEST_SLEEP( req, ierr )
 
+  USE ISO_C_BINDING, ONLY : C_LONG
   USE OpenFOAM2ElmerSolverUtils
 
   IMPLICIT NONE
+
+  INTERFACE
+    SUBROUTINE nanosleep(n) BIND(C,name="nanosleep")
+      USE ISO_C_BINDING, ONLY : C_LONG
+      INTEGER(C_LONG), VALUE :: n
+    END SUBROUTINE nanosleep
+  END INTERFACE
+
   !------------------------------------------------------------------------------
   INTEGER :: req, ierr
   LOGICAL :: Flag
@@ -83,7 +92,7 @@ SUBROUTINE MPI_TEST_SLEEP( req, ierr )
   DO WHILE ( .TRUE. )
     CALL MPI_TEST( req, Flag, MPI_STATUS_IGNORE, ierr )
     IF (Flag) EXIT
-    CALL SLEEP(1)
+    CALL nanosleep(10000000_C_LONG)
   END DO
 
 END SUBROUTINE MPI_TEST_SLEEP
@@ -116,10 +125,10 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 !  TYPE(ValueListEntry_t), POINTER :: ptrVar
   TYPE(Element_t), POINTER :: Element
   REAL(KIND=dp) :: DgScale, InvDgScale, ElemCenter(3), VarCenter
-  
+
   TYPE(Mesh_t), POINTER :: Mesh
   LOGICAL :: Visited = .FALSE., UserDefinedCoordinates 
-    
+
   SAVE Visited, Mesh
   
   
@@ -168,17 +177,15 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
         CALL Fatal('OpenFOAM2ElmerSolver','Currently it is assumed that all variables are of same size!')   
       END IF
     END DO
-  
 
     IF( Var % TYPE == Variable_on_nodes_on_elements ) THEN
-      DgScale = ListGetCReal( Params,'DG Interpolation Shrink Factor', Found ) 
-      IF(.NOT. Found ) DgScale = 1.0_dp / SQRT( 3.0_dp ) 
-      InvDgScale = 1.0_dp / DgScale 
+      DgScale = ListGetCReal( Params,'DG Interpolation Shrink Factor', Found )
+      IF(.NOT. Found ) DgScale = 1.0_dp / SQRT( 3.0_dp )
+      InvDgScale = 1.0_dp / DgScale
       WRITE( Message,'(A,ES12.3)') 'Using DG interpolation shrink factor:',DgScale
-      CALL Info('OpenFOAM2ElmerSolver', Message ) 
+      CALL Info('OpenFOAM2ElmerSolver', Message )
     END IF
 
-    
     ! MPI coupling
     !------------------------------------------------------------------------
     myLocalRank   = ParEnv % MyPE
@@ -272,10 +279,9 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
       ELSE IF( Var % TYPE == Variable_on_nodes_on_elements ) THEN
 
-        
         ! Set coordinates for elemental interpolation using DG
         !------------------------------------------------------------------------
-        DO i = 1, Mesh % NumberOfBulkElements 
+        DO i = 1, Mesh % NumberOfBulkElements
           Element => Mesh % Elements(i)
           n = Element % TYPE % NumberOfNodes
           IF( ANY( Var % Perm( Element % DGIndexes ) == 0 ) ) CYCLE
@@ -285,17 +291,17 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
           ElemCenter(2) = SUM( Mesh % Nodes % y( Element % NodeIndexes ) ) / n
           ElemCenter(3) = SUM( Mesh % Nodes % z( Element % NodeIndexes ) ) / n
 
-          ! Scale the element to be smaller 
+          ! Scale the element to be smaller
           commElementX(Var % Perm(Element % DGIndexes)) = ElemCenter(1) + &
               DgScale * ( Mesh % Nodes % x( Element % NodeIndexes ) - ElemCenter(1) )
 
           commElementY(Var % Perm(Element % DGIndexes)) = ElemCenter(2) + &
               DgScale * ( Mesh % Nodes % y( Element % NodeIndexes ) - ElemCenter(2) )
-        
+
           commElementZ(Var % Perm(Element % DGIndexes)) = ElemCenter(3) + &
               DgScale * ( Mesh % Nodes % z( Element % NodeIndexes ) - ElemCenter(3) )
         END DO
-        
+
       ELSE IF( Var % TYPE == Variable_on_gauss_points ) THEN
         CALL Fatal('OpenFOAM2ElmerSolver','Coordinates for gauss point interpolation not given')
 
@@ -387,7 +393,7 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   IF (OFstatus.NE.1) THEN
     CALL Info('OpenFOAM2ElmerSolver','Elmer has last iteration!', Level=3 )
     exitcond = ListGetCReal( CurrentModel % Simulation,'Exit Condition',Found)
-	IF(.NOT.Found) CALL ListAddConstReal(CurrentModel % Simulation,'Exit Condition',1.0_dp)
+    IF(.NOT.Found) CALL ListAddConstReal(CurrentModel % Simulation,'Exit Condition',1.0_dp)
   END IF
 
   ! Receive fields
@@ -422,28 +428,27 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
       END IF
     END DO
-  
+
     ! We used shrinked version of DG element. Now extrapolate the interpolated values
     ! to the nodes.
     IF( Var % TYPE == Variable_on_nodes_on_elements ) THEN
-      
-      DO i = 1, Mesh % NumberOfBulkElements 
+
+      DO i = 1, Mesh % NumberOfBulkElements
         Element => Mesh % Elements(i)
         n = Element % TYPE % NumberOfNodes
         IF( ANY( Var % Perm( Element % DGIndexes ) == 0 ) ) CYCLE
-        
+
         ! Compute element center
         VarCenter = SUM( Var % Values(Var % Perm(Element % DGIndexes ) ) ) / n
 
         Var % Values(Var % Perm(Element % DGIndexes ) ) = &
             VarCenter + InvDgScale * ( Var % Values(Var % Perm(Element % DGIndexes ) ) - VarCenter )
       END DO
-      
+
     END IF
 
   END DO
-    
-  
+
   VISITED = .TRUE.
 
   CALL Info('OpenFOAM2ElmerSolver','All done', Level=4 )

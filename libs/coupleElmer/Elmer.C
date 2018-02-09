@@ -119,7 +119,7 @@ mode_(mode)
             while ( true ) {
                 MPI_Iprobe(ELp[i].globalRank, 995, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
                 if (flag) break;
-                nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+                nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
             }
             MPI_Recv(&ELp[i].nFoundCells, 1, MPI_INTEGER, ELp[i].globalRank, 995, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -166,10 +166,10 @@ mode_(mode)
             while ( true ) {
                 MPI_Iprobe(ELp[i].globalRank, 899, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
                 if (flag) break;
-                nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+                nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
             }
             MPI_Recv(&ELp[i].nElem, 1, MPI_INTEGER, ELp[i].globalRank, 899, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            Pout<< "Received " << ELp[i].nElem << " elements from Elmer #" << i << endl;
+            Pout<< "Receiving " << ELp[i].nElem << " elements from Elmer #" << i << endl;
 
             ELp[i].sendBuffer0 = new (std::nothrow) double[ELp[i].nElem];
             ELp[i].sendBuffer1 = new (std::nothrow) double[ELp[i].nElem];
@@ -185,14 +185,17 @@ mode_(mode)
             MPI_Recv(ELp[i].sendBuffer0, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 898, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
+        Pout<< "Got X-coords" << endl;
         for ( i=0; i<totElmerRanks; i++ ) {
             MPI_Recv(ELp[i].sendBuffer1, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 897, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
+        Pout<< "Got Y-coords" << endl;
         for ( i=0; i<totElmerRanks; i++ ) {
             MPI_Recv(ELp[i].sendBuffer2, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 896, 
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
+        Pout<< "Got Z-coords" << endl;
 
         Info<< "Searching for cells.." << endl;
         for ( i=0; i<totElmerRanks; i++ ) {
@@ -246,7 +249,7 @@ void Foam::Elmer::recvScalar(volScalarField& field)
             while ( true ) {
                 MPI_Iprobe(ELp[i].globalRank, 1000, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
                 if (flag) break;
-                nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+                nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
             }
             MPI_Recv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
                       1000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -270,7 +273,7 @@ void Foam::Elmer::recvVector(volVectorField& field)
                 while ( true ) {
                     MPI_Iprobe(ELp[i].globalRank, 1000, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
                     if (flag) break;
-                    nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+                    nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
                 }
                 MPI_Recv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 
                           1000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
