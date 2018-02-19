@@ -78,12 +78,21 @@ public:
         //- Simulation status (1=ok, 0=lastIter, -1=error)
         void sendStatus(int status);
 
+        //- Get bound box for local mesh partition
+        void getboundBox(const fvMesh& mesh);
+
+        //- Compare bounding box of this OF partition with all EL ranks
+        void findOverlappingBoxes();
+
+        //- Test for incoming message that consumes less CPU
+        void MPI_Test_Sleep(MPI_Request& req);
+
         //- Data structure for each Elmer MPI rank
         class ElmerProc_t
         {
             public:
                 // MPI stuff
-		        MPI_Request *reqSend, *reqRecv;
+		        MPI_Request reqSend, reqRecv;
 		        int globalRank;
 
                 // Receiving fields from Elmer
@@ -99,6 +108,7 @@ public:
                 int *foundElementCellIndx;
 		        int nFoundElements;
                 point *positions;
+                bool boxOverlap;
         };
 
 private:
@@ -144,6 +154,14 @@ private:
         // Interpolation types used for interpolating Elmer's elemental field
         dictionary interpolationDict;
 
+        // Bounding box coordinates [min,max][x,y,z]
+        double boundBox[2][3];
+
+        //- Bounding boxes for all OF ranks [rank][min,max][x,y,z]
+        double *OFboundBoxes;
+
+        //- Bounding boxes for all EL ranks [rank][min,max][x,y,z]
+        double *ELboundBoxes;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

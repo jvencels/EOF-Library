@@ -24,7 +24,7 @@
 ! *  
 ! *  Email:   juris.vencels@lu.lv
 ! *  
-! *  Web:     http://eof-library.com
+! *  Web:     https://eof-library.com
 ! *
 ! *  Original Date: 29.09.2016
 ! *
@@ -49,11 +49,14 @@ MODULE Elmer2OpenFOAMSolverUtils
     LOGICAL,POINTER :: foundCells(:)
     INTEGER,POINTER :: foundCellsIndx(:)
     INTEGER :: nFoundCells
+    LOGICAL :: boxOverlap
   END TYPE OFproc_t
 
   TYPE(OFproc_t), ALLOCATABLE, TARGET :: OFp(:)
   INTEGER :: totOFRanks, OFRanksStart, ElmerRanksStart, myGlobalRank, &
                    totGlobalRanks, myLocalRank, totLocalRanks, nVars
+  REAL(KIND=dp) :: boundBox(3,2) ! [x,y,z][min,max]
+  REAL(KIND=dp), POINTER :: OFboundBoxes(:,:,:), ELboundBoxes(:,:,:) ! [x,y,z][min,max][rank]
 
 END MODULE Elmer2OpenFOAMSolverUtils
 
@@ -83,6 +86,37 @@ SUBROUTINE MPI_TEST_SLEEP( req, ierr )
   END DO
 
 END SUBROUTINE MPI_TEST_SLEEP
+
+!------------------------------------------------------------------------------
+SUBROUTINE findOverlappingBoxes()
+
+  USE Elmer2OpenFOAMSolverUtils
+
+  IMPLICIT NONE
+  !------------------------------------------------------------------------------
+  INTEGER :: ierr,  i
+  INTEGER :: status(MPI_STATUS_SIZE)
+
+  CALL MPI_ALLGATHER(boundBox, 6, MPI_DOUBLE, ELboundBoxes, 6, MPI_DOUBLE, ELMER_COMM_WORLD, ierr)
+
+  IF ( myLocalRank==0 ) THEN
+    CALL MPI_RECV(OFboundBoxes, totOFRanks*2*3, MPI_DOUBLE, OFp(0) % globalRank, 1002, MPI_COMM_WORLD, status, ierr)
+    CALL MPI_SEND(ELboundBoxes, totLocalRanks*2*3, MPI_DOUBLE, OFp(0) % globalRank, 1001, MPI_COMM_WORLD, ierr)
+  END IF
+
+  CALL MPI_Bcast(OFboundBoxes, totOFRanks*2*3, MPI_DOUBLE, 0, ELMER_COMM_WORLD, ierr);
+
+  DO i=0,totOFRanks
+    IF ((boundBox(1,1) <= OFboundBoxes(1,2,i) .NEQV. boundBox(1,2) <= OFboundBoxes(1,1,i)) .AND. &
+        (boundBox(2,1) <= OFboundBoxes(2,2,i) .NEQV. boundBox(2,2) <= OFboundBoxes(2,1,i)) .AND. &
+        (boundBox(3,1) <= OFboundBoxes(3,2,i) .NEQV. boundBox(3,2) <= OFboundBoxes(3,1,i))) THEN
+      OFp(i) % boxOverlap = .TRUE.
+    ELSE
+      OFp(i) % boxOverlap = .FALSE.
+    END IF
+  END DO
+
+END SUBROUTINE findOverlappingBoxes
 
 !------------------------------------------------------------------------------
 SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
@@ -124,16 +158,19 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
     END SUBROUTINE InterpolateMeshToMeshQ
   END INTERFACE
 
+  TYPE(Mesh_t), POINTER :: Mesh
   LOGICAL, SAVE :: VISITED = .FALSE.
 
   !------------------------------------------------------------------------------  
 
   CALL Info('Elmer2OpenFOAMSolver','-----------------------------------------', Level=4 )
 
+  ! The variable containing the field contributions
+  !--------------------------------------------------------------------------
+  Params => GetSolverParams()
+  Mesh => GetMesh()
+
   IF (.NOT. VISITED) THEN
-    ! The variable containing the field contributions
-    !--------------------------------------------------------------------------
-    Params => GetSolverParams()
     nVars = 0
 
     DO i=1,100
@@ -143,7 +180,7 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
         EXIT
       ELSE
        ! Test that the variable exists in the primary mesh
-        Var => VariableGet(CurrentModel % Mesh % Variables, VarName )
+        Var => VariableGet(Mesh % Variables, VarName )
         IF(.NOT. ASSOCIATED( Var ) ) THEN
           CALL Fatal('Elmer2OpenFOAMSolver','Variable '//TRIM(VarName)//' does not exist in Elmer mesh!')
         ELSE
@@ -183,16 +220,31 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       OFp(i) % globalRank = i + OFRanksStart
     END DO
 
+    ! Get getboundBox
+    boundBox(1,1) = MINVAL(Mesh % Nodes % x)
+    boundBox(1,2) = MAXVAL(Mesh % Nodes % x)
+    boundBox(2,1) = MINVAL(Mesh % Nodes % y)
+    boundBox(2,2) = MAXVAL(Mesh % Nodes % y)
+    boundBox(3,1) = MINVAL(Mesh % Nodes % z)
+    boundBox(3,2) = MAXVAL(Mesh % Nodes % z)
+
+    ALLOCATE( OFboundBoxes(3,2,0:totOFRanks-1) )
+    ALLOCATE( ELboundBoxes(3,2,0:totLocalRanks-1) )
+
+    CALL findOverlappingBoxes()
+
     ! Starting communication
     !------------------------------------------------------------------------
 
     DO i = 0, totOFRanks - 1
+      IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! Number of OpenFOAM cells
       CALL MPI_IRECV(OFp(i) % OFMesh % NumberOfNodes, 1, MPI_INTEGER, &
                       OFp(i) % globalRank, 999, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
+      IF(.NOT.OFp(i) % boxOverlap) CYCLE
       CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
 
       CALL Info('Elmer2OpenFOAMSolver','Receiving '//TRIM(I2S(OFp(i) % OFMesh % NumberOfNodes))// &
@@ -212,34 +264,38 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       OFp(i) % foundCells = .FALSE.
 
       ! Cell x coordinates
-      CALL MPI_RECV(OFp(i) % OFMesh % Nodes % x, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 998, MPI_COMM_WORLD, status, ierr)
+      CALL MPI_IRECV(OFp(i) % OFMesh % Nodes % x, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
+                     OFp(i) % globalRank, 998, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
     END DO
     DO i = 0, totOFRanks - 1
+      IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! wait for x coordinates
-      !CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
+      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
 
       ! Cell y coordinates
-      CALL MPI_RECV(OFp(i) % OFMesh % Nodes % y, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 997, MPI_COMM_WORLD, status, ierr)
+      CALL MPI_IRECV(OFp(i) % OFMesh % Nodes % y, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
+                     OFp(i) % globalRank, 997, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
+      IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! wait for y coordinates
-      !CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
+      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
 
       ! Cell z coordinates
-      CALL MPI_RECV(OFp(i) % OFMesh % Nodes % z, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 996, MPI_COMM_WORLD, status, ierr)
+      CALL MPI_IRECV(OFp(i) % OFMesh % Nodes % z, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
+                     OFp(i) % globalRank, 996, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
     END DO
 
     CALL Info('Elmer2OpenFOAMSolver','Projecting field to OpenFOAM cell centers',Level=10) 
     DO i = 0, totOFRanks - 1
+      OFp(i) % nFoundCells = 0
+      IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! wait for z coordinates
-      !CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
+      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
       IF ( CoordinateSystemDimension() == 2 ) OFp(i) % OFMesh % Nodes % z = 0
 
-      CALL InterpolateMeshToMeshQ( OldMesh          = CurrentModel % Mesh, &
+      CALL InterpolateMeshToMeshQ( OldMesh          = Mesh, &
                                    NewMesh          = OFp(i) % OFMesh, &
                                    UseQuadrantTree  = .TRUE., &
                                    Projector        = OFp(i) % OFMesh % Projector, &
@@ -262,6 +318,7 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
     END DO
 
     DO i = 0, totOFRanks - 1
+      IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! wait for nFoundCells
       CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
       IF ( OFp(i) % nFoundCells > 0 ) THEN
@@ -282,8 +339,6 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
 
   END IF ! .NOT. VISITED
 
-  Params => GetSolverParams()
-
   ! Receive simulation status
   CALL MPI_IRECV( OFstatus, 1, MPI_INTEGER, OFp(0) % globalRank, 799, MPI_COMM_WORLD, OFp(0) % reqRecv, ierr)
   CALL MPI_TEST_SLEEP(OFp(0) % reqRecv, ierr)
@@ -296,7 +351,7 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
   ! Send fields
   DO j=1,nVars
     VarName = ListGetString( Params, 'Target Variable '//TRIM(I2S(j)), Found )
-    Var => VariableGet( CurrentModel % Mesh % Variables, VarName )
+    Var => VariableGet( Mesh % Variables, VarName )
     IF(.NOT. ASSOCIATED( Var ) ) THEN
       CALL Fatal('Elmer2OpenFOAMSolver','Variable '//TRIM(VarName)//' does not exist in Elmer mesh!')
     END IF
