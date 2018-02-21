@@ -150,13 +150,11 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   INTEGER :: i, j, k, l, n, ierr, OFstatus
   INTEGER :: status(MPI_STATUS_SIZE)
   LOGICAL :: Found, Flag
-!  TYPE(ValueList_t), POINTER :: Material, BodyForce
-!  TYPE(ValueListEntry_t), POINTER :: ptrVar
   TYPE(Element_t), POINTER :: Element
   REAL(KIND=dp) :: DgScale, InvDgScale, ElemCenter(3), VarCenter
 
   TYPE(Mesh_t), POINTER :: Mesh
-  LOGICAL :: Visited = .FALSE., UserDefinedCoordinates 
+  LOGICAL :: Visited = .FALSE., UserDefinedCoordinates
 
   SAVE Visited, Mesh
   

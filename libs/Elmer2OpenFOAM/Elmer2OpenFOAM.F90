@@ -242,9 +242,6 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       IF(.NOT.OFp(i) % boxOverlap) CYCLE
       CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
 
-      CALL Info('Elmer2OpenFOAMSolver','Receiving '//TRIM(I2S(OFp(i) % OFMesh % NumberOfNodes))// &
-                ' cells from OpenFOAM proc #'//TRIM(I2S(i)),Level=3)
-
       ALLOCATE( OFp(i) % OFMesh % Nodes, &
                 OFp(i) % OFMesh % Variables, &
                 OFp(i) % OFVar ) 
