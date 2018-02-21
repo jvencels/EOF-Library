@@ -45,7 +45,8 @@ Address:   University of Latvia
 Foam::Elmer::Elmer(const fvMesh& mesh, int mode)
 :
 mesh_(mesh),
-mode_(mode)
+mode_(mode),
+myBoundBox(mesh.points(),false)
 {
     int i, j, k, flag;
 
@@ -77,9 +78,9 @@ mode_(mode)
         ELp[i].globalRank = i+ElmerRanksStart;
     }
 
-    getboundBox(mesh_);
     OFboundBoxes = new (std::nothrow) double[totLocalRanks*2*3];
     ELboundBoxes = new (std::nothrow) double[totElmerRanks*2*3];
+    OF_EL_overlap = new (std::nothrow) int[totLocalRanks*totElmerRanks];
     findOverlappingBoxes();
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -376,44 +377,39 @@ void Foam::Elmer::sendStatus(int status)
 }
 
 
-void Foam::Elmer::getboundBox(const fvMesh& mesh)
-{
-    point tmpPoint;
-
-    tmpPoint = mesh.bounds().min();
-    boundBox[0][0] = tmpPoint.x();
-    boundBox[0][1] = tmpPoint.y();
-    boundBox[0][2] = tmpPoint.z();
-
-    tmpPoint = mesh.bounds().max();
-    boundBox[1][0] = tmpPoint.x();
-    boundBox[1][1] = tmpPoint.y();
-    boundBox[1][2] = tmpPoint.z();
-}
-
-
 void Foam::Elmer::findOverlappingBoxes()
 {
-    MPI_Allgather(boundBox, 6, MPI_DOUBLE, OFboundBoxes, 6, MPI_DOUBLE, PstreamGlobals::MPI_OF_WORLD);
+    int OFoffset = myLocalRank*totElmerRanks;
 
     if ( myLocalRank==0 ) {
-        MPI_Send(OFboundBoxes, totLocalRanks*2*3, MPI_DOUBLE, ELp[0].globalRank, 1002, MPI_COMM_WORLD);
-        MPI_Recv(ELboundBoxes, totElmerRanks*2*3, MPI_DOUBLE, ELp[0].globalRank, 1001, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(ELboundBoxes, totElmerRanks*2*3, MPI_DOUBLE, ELp[0].globalRank, 1001,
+            MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
     MPI_Bcast(ELboundBoxes, totElmerRanks*2*3, MPI_DOUBLE, 0, PstreamGlobals::MPI_OF_WORLD);
 
     for (int i=0; i<totElmerRanks; i++ ) {
-        int offset = i*2*3;
+        point tmpPointMin;
+        point tmpPointMax;
 
-        if (((boundBox[0][0] <= ELboundBoxes[offset+3]) != (boundBox[1][0] <= ELboundBoxes[offset])) &&
-            ((boundBox[0][1] <= ELboundBoxes[offset+4]) != (boundBox[1][1] <= ELboundBoxes[offset+1])) &&
-            ((boundBox[0][2] <= ELboundBoxes[offset+5]) != (boundBox[1][2] <= ELboundBoxes[offset+2]))) {
-            ELp[i].boxOverlap = true;
-            Pout<< "Overlapping with Elmer #" << i << endl;
-        } else {
-            ELp[i].boxOverlap = false;
-        }
+        int ELoffset = i*2*3;
+        tmpPointMin.x() = ELboundBoxes[ELoffset];
+        tmpPointMin.y() = ELboundBoxes[ELoffset+1];
+        tmpPointMin.z() = ELboundBoxes[ELoffset+2];
+        tmpPointMax.x() = ELboundBoxes[ELoffset+3];
+        tmpPointMax.y() = ELboundBoxes[ELoffset+4];
+        tmpPointMax.z() = ELboundBoxes[ELoffset+5];
+        boundBox tmpBoundBox(tmpPointMin, tmpPointMax);
+
+        ELp[i].boxOverlap = myBoundBox.overlaps(tmpBoundBox);        
+        OF_EL_overlap[OFoffset+i] = int(ELp[i].boxOverlap);
+    }
+
+    MPI_Allgather(&OF_EL_overlap[OFoffset], totElmerRanks, MPI_INTEGER,
+        OF_EL_overlap, totElmerRanks, MPI_INTEGER, PstreamGlobals::MPI_OF_WORLD);
+
+    if ( myLocalRank==0 ) {
+        MPI_Send(OF_EL_overlap, totLocalRanks*totElmerRanks, MPI_INTEGER, ELp[0].globalRank, 1002, MPI_COMM_WORLD);
     }
 }
 

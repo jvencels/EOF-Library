@@ -68,8 +68,9 @@ MODULE OpenFOAM2ElmerSolverUtils
 !  LOGICAL, ALLOCATABLE :: commMaterial(:), commBody(:), commBodyForce(:)
   REAL(KIND=dp), POINTER :: commElementX(:), commElementY(:), commElementZ(:)
   TYPE(OFproc_t), ALLOCATABLE, TARGET :: OFp(:)
-  REAL(KIND=dp) :: boundBox(3,2) ! [x,y,z][min,max]
-  REAL(KIND=dp), POINTER :: OFboundBoxes(:,:,:), ELboundBoxes(:,:,:) ! [x,y,z][min,max][rank]
+  REAL(KIND=dp) :: myBoundBox(3,2) ! [x,y,z][min,max]
+  REAL(KIND=dp), POINTER :: ELboundBoxes(:,:,:) ! [x,y,z][min,max][rank]
+  INTEGER, POINTER :: OF_EL_overlap(:,:) ! [ELrank][OFrank]
 
 END MODULE OpenFOAM2ElmerSolverUtils
 
@@ -110,23 +111,17 @@ SUBROUTINE findOverlappingBoxes()
   INTEGER :: ierr,  i
   INTEGER :: status(MPI_STATUS_SIZE)
 
-  CALL MPI_ALLGATHER(boundBox, 6, MPI_DOUBLE, ELboundBoxes, 6, MPI_DOUBLE, ELMER_COMM_WORLD, ierr)
+  CALL MPI_ALLGATHER(myBoundBox, 6, MPI_DOUBLE, ELboundBoxes, 6, MPI_DOUBLE, ELMER_COMM_WORLD, ierr)
 
   IF ( myLocalRank==0 ) THEN
-    CALL MPI_RECV(OFboundBoxes, totOFRanks*2*3, MPI_DOUBLE, OFp(0) % globalRank, 1002, MPI_COMM_WORLD, status, ierr)
     CALL MPI_SEND(ELboundBoxes, totLocalRanks*2*3, MPI_DOUBLE, OFp(0) % globalRank, 1001, MPI_COMM_WORLD, ierr)
+    CALL MPI_RECV(OF_EL_overlap, totOFRanks*totLocalRanks, MPI_INTEGER, OFp(0) % globalRank, 1002, MPI_COMM_WORLD, status, ierr)
   END IF
 
-  CALL MPI_Bcast(OFboundBoxes, totOFRanks*2*3, MPI_DOUBLE, 0, ELMER_COMM_WORLD, ierr);
+  CALL MPI_Bcast(OF_EL_overlap, totOFRanks*totLocalRanks, MPI_INTEGER, 0, ELMER_COMM_WORLD, ierr)
 
   DO i=0,totOFRanks
-    IF ((boundBox(1,1) <= OFboundBoxes(1,2,i) .NEQV. boundBox(1,2) <= OFboundBoxes(1,1,i)) .AND. &
-        (boundBox(2,1) <= OFboundBoxes(2,2,i) .NEQV. boundBox(2,2) <= OFboundBoxes(2,1,i)) .AND. &
-        (boundBox(3,1) <= OFboundBoxes(3,2,i) .NEQV. boundBox(3,2) <= OFboundBoxes(3,1,i))) THEN
-      OFp(i) % boxOverlap = .TRUE.
-    ELSE
-      OFp(i) % boxOverlap = .FALSE.
-    END IF
+    OFp(i) % boxOverlap = (OF_EL_overlap(myLocalRank,i)==1)
   END DO
 
 END SUBROUTINE findOverlappingBoxes
@@ -249,14 +244,14 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     END DO
 
     ! Get getboundBox
-    boundBox(1,1) = MINVAL(Mesh % Nodes % x)
-    boundBox(1,2) = MAXVAL(Mesh % Nodes % x)
-    boundBox(2,1) = MINVAL(Mesh % Nodes % y)
-    boundBox(2,2) = MAXVAL(Mesh % Nodes % y)
-    boundBox(3,1) = MINVAL(Mesh % Nodes % z)
-    boundBox(3,2) = MAXVAL(Mesh % Nodes % z)
+    myBoundBox(1,1) = MINVAL(Mesh % Nodes % x)
+    myBoundBox(1,2) = MAXVAL(Mesh % Nodes % x)
+    myBoundBox(2,1) = MINVAL(Mesh % Nodes % y)
+    myBoundBox(2,2) = MAXVAL(Mesh % Nodes % y)
+    myBoundBox(3,1) = MINVAL(Mesh % Nodes % z)
+    myBoundBox(3,2) = MAXVAL(Mesh % Nodes % z)
 
-    ALLOCATE( OFboundBoxes(3,2,0:totOFRanks-1) )
+    ALLOCATE( OF_EL_overlap(0:totLocalRanks-1,0:totOFRanks-1) )
     ALLOCATE( ELboundBoxes(3,2,0:totLocalRanks-1) )
 
     CALL findOverlappingBoxes()

@@ -108,6 +108,8 @@ public:
                 int *foundElementCellIndx;
 		        int nFoundElements;
                 point *positions;
+
+                // Bounding box
                 bool boxOverlap;
         };
 
@@ -154,14 +156,17 @@ private:
         // Interpolation types used for interpolating Elmer's elemental field
         dictionary interpolationDict;
 
-        // Bounding box coordinates [min,max][x,y,z]
-        double boundBox[2][3];
+        // Bounding box for this OF rank
+        boundBox myBoundBox;
 
         //- Bounding boxes for all OF ranks [rank][min,max][x,y,z]
         double *OFboundBoxes;
 
         //- Bounding boxes for all EL ranks [rank][min,max][x,y,z]
         double *ELboundBoxes;
+
+        //- Boolean matrix for storing overlappings [OFranks][ELranks]
+        int *OF_EL_overlap;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
