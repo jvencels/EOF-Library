@@ -77,16 +77,17 @@ END MODULE OpenFOAM2ElmerSolverUtils
 !------------------------------------------------------------------------------
 SUBROUTINE MPI_TEST_SLEEP( req, ierr )
 
-  USE ISO_C_BINDING, ONLY : C_LONG
+  USE ISO_C_BINDING
   USE OpenFOAM2ElmerSolverUtils
 
   IMPLICIT NONE
 
   INTERFACE
-    SUBROUTINE nanosleep(n) BIND(C,name="nanosleep")
-      USE ISO_C_BINDING, ONLY : C_LONG
-      INTEGER(C_LONG), VALUE :: n
-    END SUBROUTINE nanosleep
+    SUBROUTINE usleep(n) bind(C)
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(c_int32_t), VALUE :: n
+    END SUBROUTINE usleep
   END INTERFACE
 
   !------------------------------------------------------------------------------
@@ -96,7 +97,7 @@ SUBROUTINE MPI_TEST_SLEEP( req, ierr )
   DO WHILE ( .TRUE. )
     CALL MPI_TEST( req, Flag, MPI_STATUS_IGNORE, ierr )
     IF (Flag) EXIT
-    CALL nanosleep(1000000_C_LONG)
+    CALL usleep(1000_c_int32_t)
   END DO
 
 END SUBROUTINE MPI_TEST_SLEEP
