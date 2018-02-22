@@ -55,12 +55,14 @@ myBoundBox(mesh.points(),false)
     MPI_Comm_rank(MPI_COMM_WORLD, &myGlobalRank);
     MPI_Comm_size(MPI_COMM_WORLD, &totGlobalRanks);
 
-    MPI_Comm_size(Foam::PstreamGlobals::MPI_OF_WORLD, &totLocalRanks);
-    MPI_Comm_rank(Foam::PstreamGlobals::MPI_OF_WORLD, &myLocalRank);
+    MPI_Comm_size(PstreamGlobals::MPI_COMM_FOAM, &totLocalRanks);
+    MPI_Comm_rank(PstreamGlobals::MPI_COMM_FOAM, &myLocalRank);
 
     totElmerRanks = totGlobalRanks-totLocalRanks;
 
-    MPI_Allreduce(&myGlobalRank, &OFRanksStart, 1, MPI_INTEGER, MPI_MIN, Foam::PstreamGlobals::MPI_OF_WORLD);
+    if (myLocalRank==0) OFRanksStart = myGlobalRank;
+
+    MPI_Bcast(&OFRanksStart, 1, MPI_INT, 0, PstreamGlobals::MPI_COMM_FOAM);
 
     if (OFRanksStart==0) {
         ElmerRanksStart = totLocalRanks;
@@ -109,28 +111,22 @@ myBoundBox(mesh.points(),false)
 
         for ( i=0; i<totElmerRanks; i++ ) {
             if (!ELp[i].boxOverlap) continue;
-            MPI_Isend(&nCells, 1, MPI_INTEGER, ELp[i].globalRank, 999, MPI_COMM_WORLD, &ELp[i].reqSend);
+            MPI_Isend(&nCells, 1, MPI_INT, ELp[i].globalRank, 999, MPI_COMM_WORLD, &ELp[i].reqSend);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
             if (!ELp[i].boxOverlap) continue;
             MPI_Test_Sleep(ELp[i].reqSend);
-            MPI_Isend(cellCentres_x, nCells, MPI_DOUBLE, ELp[i].globalRank, 998, MPI_COMM_WORLD, &ELp[i].reqSend);
-        }
-        for ( i=0; i<totElmerRanks; i++ ) {
-            if (!ELp[i].boxOverlap) continue;
-            MPI_Test_Sleep(ELp[i].reqSend);
+            MPI_Isend(cellCentres_x, nCells, MPI_DOUBLE, ELp[i].globalRank, 997, MPI_COMM_WORLD, &ELp[i].reqSend);
+            MPI_Request_free(&ELp[i].reqSend);
             MPI_Isend(cellCentres_y, nCells, MPI_DOUBLE, ELp[i].globalRank, 997, MPI_COMM_WORLD, &ELp[i].reqSend);
-        }
-        for ( i=0; i<totElmerRanks; i++ ) {
-            if (!ELp[i].boxOverlap) continue;
-            MPI_Test_Sleep(ELp[i].reqSend);
-            MPI_Isend(cellCentres_z, nCells, MPI_DOUBLE, ELp[i].globalRank, 996, MPI_COMM_WORLD, &ELp[i].reqSend);
+            MPI_Request_free(&ELp[i].reqSend);
+            MPI_Isend(cellCentres_z, nCells, MPI_DOUBLE, ELp[i].globalRank, 997, MPI_COMM_WORLD, &ELp[i].reqSend);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
             ELp[i].nFoundCells = 0; // keep this
             if (!ELp[i].boxOverlap) continue;
             MPI_Test_Sleep(ELp[i].reqSend);
-            MPI_Irecv(&ELp[i].nFoundCells, 1, MPI_INTEGER, ELp[i].globalRank, 995,
+            MPI_Irecv(&ELp[i].nFoundCells, 1, MPI_INT, ELp[i].globalRank, 995,
                       MPI_COMM_WORLD, &ELp[i].reqRecv);
         }
 
@@ -155,7 +151,7 @@ myBoundBox(mesh.points(),false)
                 FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError);
             }
 
-            MPI_Irecv(ELp[i].foundCellsIndx, ELp[i].nFoundCells, MPI_INTEGER, ELp[i].globalRank, 994,
+            MPI_Irecv(ELp[i].foundCellsIndx, ELp[i].nFoundCells, MPI_INT, ELp[i].globalRank, 994,
                       MPI_COMM_WORLD, &ELp[i].reqRecv);
         }
 
@@ -180,7 +176,7 @@ myBoundBox(mesh.points(),false)
 
         for ( i=0; i<totElmerRanks; i++ ) {
             if (!ELp[i].boxOverlap) continue;
-            MPI_Irecv(&ELp[i].nElem, 1, MPI_INTEGER, ELp[i].globalRank, 899, MPI_COMM_WORLD, &ELp[i].reqRecv);
+            MPI_Irecv(&ELp[i].nElem, 1, MPI_INT, ELp[i].globalRank, 899, MPI_COMM_WORLD, &ELp[i].reqRecv);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
             if (!ELp[i].boxOverlap) continue;
@@ -195,25 +191,19 @@ myBoundBox(mesh.points(),false)
                 FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError);
             }
 
-            MPI_Irecv(ELp[i].sendBuffer0, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 898,
+            MPI_Irecv(ELp[i].sendBuffer0, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 897,
                       MPI_COMM_WORLD, &ELp[i].reqRecv);
-        }
-        for ( i=0; i<totElmerRanks; i++ ) {
-            if (!ELp[i].boxOverlap) continue;
-            MPI_Test_Sleep(ELp[i].reqRecv);
+            MPI_Request_free(&ELp[i].reqRecv);
             MPI_Irecv(ELp[i].sendBuffer1, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 897,
                       MPI_COMM_WORLD, &ELp[i].reqRecv);
-        }
-        for ( i=0; i<totElmerRanks; i++ ) {
-            if (!ELp[i].boxOverlap) continue;
-            MPI_Test_Sleep(ELp[i].reqRecv);
-            MPI_Irecv(ELp[i].sendBuffer2, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 896,
+            MPI_Request_free(&ELp[i].reqRecv);
+            MPI_Irecv(ELp[i].sendBuffer2, ELp[i].nElem, MPI_DOUBLE, ELp[i].globalRank, 897,
                       MPI_COMM_WORLD, &ELp[i].reqRecv);
         }
 
         Info<< "Searching for cells.." << endl;
         for ( i=0; i<totElmerRanks; i++ ) {
-            ELp[i].nFoundElements = 0;
+            ELp[i].nFoundElements = 0; // keep this
             if (!ELp[i].boxOverlap) continue;
             MPI_Test_Sleep(ELp[i].reqRecv);
             for ( j=0; j<ELp[i].nElem; j++ ) {
@@ -222,8 +212,8 @@ myBoundBox(mesh.points(),false)
                 ELp[i].foundElement[j] = mesh.findCell(tmpPoint);
                 if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
             }
-            Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
-            MPI_Isend(&ELp[i].nFoundElements, 1, MPI_INTEGER, ELp[i].globalRank, 895,
+            //Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
+            MPI_Isend(&ELp[i].nFoundElements, 1, MPI_INT, ELp[i].globalRank, 895,
                       MPI_COMM_WORLD, &ELp[i].reqSend);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
@@ -252,7 +242,7 @@ myBoundBox(mesh.points(),false)
                     k++;
                 }
             }
-            MPI_Isend(ELp[i].foundElementIndx, ELp[i].nFoundElements, MPI_INTEGER, ELp[i].globalRank, 894,
+            MPI_Isend(ELp[i].foundElementIndx, ELp[i].nFoundElements, MPI_INT, ELp[i].globalRank, 894,
                       MPI_COMM_WORLD, &ELp[i].reqSend);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
@@ -270,17 +260,15 @@ void Foam::Elmer::recvScalar(volScalarField& field)
     Info<< "Receiving scalar field from Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
-        if ( ELp[i].nFoundCells > 0 ) {
-            MPI_Irecv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 1000,
-                      MPI_COMM_WORLD, &ELp[i].reqRecv);
-        }
+        if ( ELp[i].nFoundCells == 0 ) continue;
+        MPI_Irecv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 1000,
+                  MPI_COMM_WORLD, &ELp[i].reqRecv);
     }
     for ( i=0; i<totElmerRanks; i++ ) {
-        if ( ELp[i].nFoundCells > 0 ) {
-            MPI_Test_Sleep(ELp[i].reqRecv);
-            for (j=0; j<ELp[i].nFoundCells; j++ ) {
-                field[ELp[i].foundCellsIndx[j]] = ELp[i].recvBuffer0[j];
-            }
+        if ( ELp[i].nFoundCells == 0 ) continue;
+        MPI_Test_Sleep(ELp[i].reqRecv);
+        for (j=0; j<ELp[i].nFoundCells; j++ ) {
+            field[ELp[i].foundCellsIndx[j]] = ELp[i].recvBuffer0[j];
         }
     }
 }
@@ -294,17 +282,15 @@ void Foam::Elmer::recvVector(volVectorField& field)
 
     for (dim=0; dim<3; dim++) { 
         for ( i=0; i<totElmerRanks; i++ ) {
-            if ( ELp[i].nFoundCells > 0 ) {
-                MPI_Irecv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 1000,
-                          MPI_COMM_WORLD, &ELp[i].reqRecv);
-            }
+            if ( ELp[i].nFoundCells == 0 ) continue;
+            MPI_Irecv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 1000,
+                      MPI_COMM_WORLD, &ELp[i].reqRecv);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
-            if ( ELp[i].nFoundCells > 0 ) {
-                MPI_Test_Sleep(ELp[i].reqRecv);
-                for (j=0; j<ELp[i].nFoundCells; j++ ) {
-                    field[ELp[i].foundCellsIndx[j]].component(dim) = ELp[i].recvBuffer0[j];
-                }
+            if ( ELp[i].nFoundCells == 0 ) continue;
+            MPI_Test_Sleep(ELp[i].reqRecv);
+            for (j=0; j<ELp[i].nFoundCells; j++ ) {
+                field[ELp[i].foundCellsIndx[j]].component(dim) = ELp[i].recvBuffer0[j];
             }
         }
     }
@@ -320,19 +306,17 @@ void Foam::Elmer::sendScalar(volScalarField& field)
     Info<< "Sending scalar field to Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
-        if ( ELp[i].nFoundElements > 0 ) {
-            for (j=0; j<ELp[i].nFoundElements; j++) {
-                ELp[i].sendBuffer0[j] = interpField->
-                       interpolate(ELp[i].positions[j], ELp[i].foundElementCellIndx[j]);
-            }
-            MPI_Isend(ELp[i].sendBuffer0, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank, 900,
-                      MPI_COMM_WORLD, &ELp[i].reqSend);
+        if ( ELp[i].nFoundElements == 0 ) continue;
+        for (j=0; j<ELp[i].nFoundElements; j++) {
+            ELp[i].sendBuffer0[j] = interpField->
+                   interpolate(ELp[i].positions[j], ELp[i].foundElementCellIndx[j]);
         }
+        MPI_Isend(ELp[i].sendBuffer0, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank, 900,
+                  MPI_COMM_WORLD, &ELp[i].reqSend);
     }
     for ( i=0; i<totElmerRanks; i++ ) {
-        if ( ELp[i].nFoundElements > 0 ) {
-            MPI_Test_Sleep(ELp[i].reqSend);
-        }
+        if ( ELp[i].nFoundElements == 0 ) continue;
+        MPI_Test_Sleep(ELp[i].reqSend);
     }
 }
 
@@ -354,16 +338,19 @@ void Foam::Elmer::sendVector(volVectorField& field)
             ELp[i].sendBuffer1[j] = tmpVector.component(1);
             ELp[i].sendBuffer2[j] = tmpVector.component(2);
         }
+        MPI_Isend(ELp[i].sendBuffer0, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank, 900,
+                 MPI_COMM_WORLD, &ELp[i].reqSend);
+        MPI_Request_free(&ELp[i].reqSend);
+        MPI_Isend(ELp[i].sendBuffer1, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank, 900,
+                 MPI_COMM_WORLD, &ELp[i].reqSend);
+        MPI_Request_free(&ELp[i].reqSend);
+        MPI_Isend(ELp[i].sendBuffer2, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank, 900,
+                 MPI_COMM_WORLD, &ELp[i].reqSend);
     }
 
     for ( i=0; i<totElmerRanks; i++ ) {
         if ( ELp[i].nFoundElements == 0 ) continue;
-        MPI_Send(ELp[i].sendBuffer0, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank,
-                   900, MPI_COMM_WORLD);
-        MPI_Send(ELp[i].sendBuffer1, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank,
-                   900, MPI_COMM_WORLD);
-        MPI_Send(ELp[i].sendBuffer2, ELp[i].nFoundElements, MPI_DOUBLE, ELp[i].globalRank,
-                   900, MPI_COMM_WORLD);
+        MPI_Test_Sleep(ELp[i].reqSend);
     }
 }
 
@@ -374,7 +361,7 @@ void Foam::Elmer::sendStatus(int status)
 
     if (myLocalRank==0) {
         for ( i=0; i<totElmerRanks; i++ ) {
-            MPI_Isend(&status, 1, MPI_INTEGER, ELp[i].globalRank,799, MPI_COMM_WORLD, &ELp[i].reqSend);
+            MPI_Isend(&status, 1, MPI_INT, ELp[i].globalRank,799, MPI_COMM_WORLD, &ELp[i].reqSend);
         }
         for ( i=0; i<totElmerRanks; i++ ) {
             MPI_Test_Sleep(ELp[i].reqSend);
@@ -392,7 +379,7 @@ void Foam::Elmer::findOverlappingBoxes()
                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
-    MPI_Bcast(ELboundBoxes, totElmerRanks*2*3, MPI_DOUBLE, 0, PstreamGlobals::MPI_OF_WORLD);
+    MPI_Bcast(ELboundBoxes, totElmerRanks*2*3, MPI_DOUBLE, 0, PstreamGlobals::MPI_COMM_FOAM);
 
     for (int i=0; i<totElmerRanks; i++ ) {
         point tmpPointMin;
@@ -411,11 +398,11 @@ void Foam::Elmer::findOverlappingBoxes()
         OF_EL_overlap[OFoffset+i] = int(ELp[i].boxOverlap);
     }
 
-    MPI_Allgather(&OF_EL_overlap[OFoffset], totElmerRanks, MPI_INTEGER,
-        OF_EL_overlap, totElmerRanks, MPI_INTEGER, PstreamGlobals::MPI_OF_WORLD);
+    MPI_Allgather(&OF_EL_overlap[OFoffset], totElmerRanks, MPI_INT,
+        OF_EL_overlap, totElmerRanks, MPI_INT, PstreamGlobals::MPI_COMM_FOAM);
 
     if ( myLocalRank==0 ) {
-        MPI_Send(OF_EL_overlap, totLocalRanks*totElmerRanks, MPI_INTEGER, ELp[0].globalRank, 1002,
+        MPI_Send(OF_EL_overlap, totLocalRanks*totElmerRanks, MPI_INT, ELp[0].globalRank, 1002,
                  MPI_COMM_WORLD);
     }
 }
@@ -428,7 +415,7 @@ void Foam::Elmer::MPI_Test_Sleep(MPI_Request& req)
     while ( true ) {
         MPI_Test( &req, &flag, MPI_STATUS_IGNORE);
         if (flag) break;
-        nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
+        nanosleep((const struct timespec[]){{0, 1000000L}}, NULL);
     }
 }
 

@@ -83,7 +83,7 @@ SUBROUTINE MPI_TEST_SLEEP( req, ierr )
   DO WHILE ( .TRUE. )
     CALL MPI_TEST( req, Flag, MPI_STATUS_IGNORE, ierr )
     IF (Flag) EXIT
-    CALL nanosleep(10000000_C_LONG)
+    CALL nanosleep(1000000_C_LONG)
   END DO
 
 END SUBROUTINE MPI_TEST_SLEEP
@@ -199,7 +199,8 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       CALL Fatal('Elmer2OpenFOAMSolver','MPI communicator does not have OpenFOAM procs!')
     END IF
 
-    CALL MPI_ALLREDUCE(myGlobalRank, ElmerRanksStart, 1, MPI_INTEGER, MPI_MIN, ELMER_COMM_WORLD, ierr)
+    IF (myLocalRank == 0) ElmerRanksStart = myGlobalRank
+    CALL MPI_BCAST(ElmerRanksStart, 1, MPI_INTEGER, 0, ELMER_COMM_WORLD, ierr)
 
     IF (ElmerRanksStart==0) THEN
        OFRanksStart = totLocalRanks
@@ -257,31 +258,18 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
 
       ! Cell x coordinates
       CALL MPI_IRECV(OFp(i) % OFMesh % Nodes % x, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 998, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
-    END DO
-    DO i = 0, totOFRanks - 1
-      IF(.NOT.OFp(i) % boxOverlap) CYCLE
-      ! wait for x coordinates
-      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
-
-      ! Cell y coordinates
+                     OFp(i) % globalRank, 997, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
+      CALL MPI_REQUEST_FREE(OFp(i) % reqRecv, ierr)
       CALL MPI_IRECV(OFp(i) % OFMesh % Nodes % y, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
                      OFp(i) % globalRank, 997, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
-    END DO
-
-    DO i = 0, totOFRanks - 1
-      IF(.NOT.OFp(i) % boxOverlap) CYCLE
-      ! wait for y coordinates
-      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
-
-      ! Cell z coordinates
+      CALL MPI_REQUEST_FREE(OFp(i) % reqRecv, ierr)
       CALL MPI_IRECV(OFp(i) % OFMesh % Nodes % z, OFp(i) % OFMesh % NumberOfNodes, MPI_DOUBLE, &
-                     OFp(i) % globalRank, 996, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
+                     OFp(i) % globalRank, 997, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
     END DO
 
     CALL Info('Elmer2OpenFOAMSolver','Projecting field to OpenFOAM cell centers',Level=10) 
     DO i = 0, totOFRanks - 1
-      OFp(i) % nFoundCells = 0
+      OFp(i) % nFoundCells = 0 ! keep this
       IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! wait for z coordinates
       CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
@@ -296,14 +284,6 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
 
       OFp(i) % nFoundCells = COUNT(OFp(i) % foundCells)
 
-      IF ( OFp(i) % nFoundCells > 0 ) THEN
-        ALLOCATE( OFp(i) % OFVar % Values( OFp(i) % nFoundCells ), &
-                  OFp(i) % foundCellsIndx( OFp(i) % nFoundCells ), &
-                  OFp(i) % OFVar % Perm( OFp(i) % nFoundCells ) )
-
-        OFp(i) % OFVar % Perm = (/ (j, j = 1, OFp(i) % nFoundCells) /)
-      END IF
-
       ! Number of cells found in each Elmer process
       CALL MPI_ISEND( OFp(i) % nFoundCells, 1, MPI_INTEGER, &
                       OFp(i) % globalRank, 995, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
@@ -313,20 +293,23 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! wait for nFoundCells
       CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
-      IF ( OFp(i) % nFoundCells > 0 ) THEN
-        OFp(i) % foundCellsIndx = PACK((/ (j, j = 0, OFp(i) % OFMesh % NumberOfNodes-1) /),OFp(i) % foundCells)
 
-        ! Indexes for cells that were found on this piece of Elmer mesh
-        CALL MPI_ISEND( OFp(i) % foundCellsIndx, OFp(i) % nFoundCells, MPI_INTEGER, &
-                        OFp(i) % globalRank, 994, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
-      END IF
+      IF ( OFp(i) % nFoundCells == 0 ) CYCLE
+      ALLOCATE( OFp(i) % OFVar % Values( OFp(i) % nFoundCells ), &
+                OFp(i) % foundCellsIndx( OFp(i) % nFoundCells ), &
+                OFp(i) % OFVar % Perm( OFp(i) % nFoundCells ) )
+
+      OFp(i) % OFVar % Perm = (/ (j, j = 1, OFp(i) % nFoundCells) /)
+      OFp(i) % foundCellsIndx = PACK((/ (j, j = 0, OFp(i) % OFMesh % NumberOfNodes-1) /),OFp(i) % foundCells)
+
+      ! Indexes for cells that were found on this piece of Elmer mesh
+      CALL MPI_ISEND( OFp(i) % foundCellsIndx, OFp(i) % nFoundCells, MPI_INTEGER, &
+                      OFp(i) % globalRank, 994, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
-      IF ( OFp(i) % nFoundCells > 0 ) THEN
-        ! wait for foundCells
-        CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
-      END IF
+      IF ( OFp(i) % nFoundCells == 0 ) CYCLE
+      CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
     END DO
 
   END IF ! .NOT. VISITED
@@ -349,20 +332,18 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
     END IF
 
     DO i = 0, totOFRanks - 1
-      IF ( OFp(i) % nFoundCells > 0 ) THEN
-        OFp(i) % OFVar % Values = 0
-        CALL CRS_ApplyProjector( OFp(i) % OFMesh % Projector % Matrix, Var % Values, &
-                     Var % Perm, OFp(i) % OFVar % Values, OFp(i) % OFVar % Perm )
+      IF ( OFp(i) % nFoundCells == 0 ) CYCLE
+      OFp(i) % OFVar % Values = 0
+      CALL CRS_ApplyProjector( OFp(i) % OFMesh % Projector % Matrix, Var % Values, &
+                   Var % Perm, OFp(i) % OFVar % Values, OFp(i) % OFVar % Perm )
 
-        CALL MPI_ISEND( OFp(i) % OFVar % Values, OFp(i) % nFoundCells, MPI_DOUBLE, &
-                        OFp(i) % globalRank, 1000, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
-      END IF
+      CALL MPI_ISEND( OFp(i) % OFVar % Values, OFp(i) % nFoundCells, MPI_DOUBLE, &
+                      OFp(i) % globalRank, 1000, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
     END DO
 
     DO i = 0, totOFRanks - 1
-      IF ( OFp(i) % nFoundCells > 0 ) THEN
-        CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
-      END IF
+      IF ( OFp(i) % nFoundCells == 0 ) CYCLE
+      CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
     END DO
   END DO
 

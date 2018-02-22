@@ -5,7 +5,7 @@ This software is maintained by the *Laboratory for mathematical modelling of env
 
 ## Requirements ##
 * Tested on Ubuntu 14.04 and Ubuntu 16.04.
-* Currently supported **OpenFOAM** version **5.0**. We suggest to compile it from the source code since version from Ubuntu repositories can be incompatible with coupler. 
+* Currently supported **OpenFOAM** version **5.0** compiled from source (https://openfoam.org/download/5-0-source/). Other OpenFOAM versions currently are not supported.
 * Both Elmer and OpenFOAM must use the same OpenMPI version.
 * You will need `git`, `cmake`, `gfortran`, `blas` and `lapack`. 
 
@@ -68,14 +68,15 @@ cp -r ../tests/mhdInterFoamTest_2D .
 cd mhdInterFoamTest_2D
 setFields
 decomposePar
+ElmerGrid 2 2 mesh_Elmer -metis 2
 ```
 
 * Copy `Elmer2OpenFOAM.so`, `Elmer2OpenFOAM.mod`, `OpenFOAM2Elmer.so` and `OpenFOAM2Elmer.mod` to this folder
 
-* Run OpenFOAM on 2 processes and Elmer on 1 process
+* Run OpenFOAM on 2 processes and Elmer on 2 processes
 
 ```
-mpirun -np 2 mhdInterFoam -parallel : -np 1 ElmerSolver_mpi
+mpirun -np 2 mhdInterFoam -parallel : -np 2 ElmerSolver_mpi
 ```
 
 * Postprocessing

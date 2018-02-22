@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -20,6 +20,10 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+
+Note
+    The const_cast used in this file is a temporary hack for to work around
+    bugs in OpenMPI for versions < 1.7.4
 
 \*---------------------------------------------------------------------------*/
 
@@ -40,6 +44,8 @@ License
     #define MPI_SCALAR MPI_FLOAT
 #elif defined(WM_DP)
     #define MPI_SCALAR MPI_DOUBLE
+#elif defined(WM_LP)
+    #define MPI_SCALAR MPI_LONG_DOUBLE
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -71,15 +77,25 @@ bool Foam::UPstream::init(int& argc, char**& argv)
         &provided_thread_support
     );
 
-    // Split OpenFOAM comm from other communicators
+    // int numprocs;
+    // MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+    // int myRank;
+    // MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
     int myGlobalRank;
     MPI_Comm_rank(MPI_COMM_WORLD, &myGlobalRank);
-    MPI_Comm_split(MPI_COMM_WORLD, 1, myGlobalRank, &Foam::PstreamGlobals::MPI_OF_WORLD);
+    MPI_Comm_split
+    (
+        MPI_COMM_WORLD,
+        1,
+        myGlobalRank,
+        &PstreamGlobals::MPI_COMM_FOAM
+    );
 
     int numprocs;
-    MPI_Comm_size(Foam::PstreamGlobals::MPI_OF_WORLD, &numprocs);
+    MPI_Comm_size(PstreamGlobals::MPI_COMM_FOAM, &numprocs);
     int myRank;
-    MPI_Comm_rank(Foam::PstreamGlobals::MPI_OF_WORLD, &myRank);
+    MPI_Comm_rank(PstreamGlobals::MPI_COMM_FOAM, &myRank);
 
     if (debug)
     {
@@ -178,20 +194,19 @@ void Foam::UPstream::exit(int errnum)
 
     if (errnum == 0)
     {
-        MPI_Comm_free(&Foam::PstreamGlobals::MPI_OF_WORLD);
         MPI_Finalize();
         ::exit(errnum);
     }
     else
     {
-        MPI_Abort(MPI_COMM_WORLD, errnum);
+        MPI_Abort(PstreamGlobals::MPI_COMM_FOAM, errnum);
     }
 }
 
 
 void Foam::UPstream::abort()
 {
-    MPI_Abort(MPI_COMM_WORLD, 1);
+    MPI_Abort(PstreamGlobals::MPI_COMM_FOAM, 1);
 }
 
 
@@ -347,8 +362,6 @@ void Foam::UPstream::allToAll
         (
             MPI_Alltoall
             (
-                // NOTE: const_cast is a temporary hack for
-                // backward-compatibility with versions of OpenMPI < 1.7.4
                 const_cast<label*>(sendData.begin()),
                 sizeof(label),
                 MPI_BYTE,
@@ -401,8 +414,13 @@ void Foam::UPstream::allocatePstreamCommunicator
                 << UPstream::worldComm << Foam::exit(FatalError);
         }
 
-        PstreamGlobals::MPICommunicators_[index] = Foam::PstreamGlobals::MPI_OF_WORLD;
-        MPI_Comm_group(Foam::PstreamGlobals::MPI_OF_WORLD, &PstreamGlobals::MPIGroups_[index]);
+        PstreamGlobals::MPICommunicators_[index] =
+            PstreamGlobals::MPI_COMM_FOAM;
+        MPI_Comm_group
+        (
+            PstreamGlobals::MPI_COMM_FOAM,
+            &PstreamGlobals::MPIGroups_[index]
+        );
         MPI_Comm_rank
         (
             PstreamGlobals::MPICommunicators_[index],
