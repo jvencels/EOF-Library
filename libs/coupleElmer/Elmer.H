@@ -41,6 +41,18 @@ Original Date: 12.12.2016.
 #ifndef Elmer_H
 #define Elmer_H
 
+// Stuff for compatibility with OF2.4
+#ifndef FatalErrorInFunction
+#ifdef __GNUC__
+   #define FUNCTION_NAME __PRETTY_FUNCTION__
+#else
+   #define FUNCTION_NAME __func__
+#endif
+ //- Report an error message using Foam::FatalError
+ //  for FUNCTION_NAME in file __FILE__ at line __LINE__
+#define FatalErrorInFunction FatalErrorIn(FUNCTION_NAME)
+#endif
+
 #include "fvCFD.H"
 #include "PstreamGlobals.H"
 

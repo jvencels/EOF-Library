@@ -5,7 +5,7 @@ EXE_INC  = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
     -I../commSplit/lnInclude \
-    $(PFLAGS) $(PINC)
+    $(PFLAGS) $(PINC) -std=gnu++0x
 
 LIB_LIBS = \
     -lfiniteVolume \
