@@ -4,4 +4,3 @@ before_install:
 - docker ps -a
 script:
 - docker build -t eof-library/test -f docker/Dockerfile-test .
-- docker run eof-library/test  -c 'ctest -R EOF'

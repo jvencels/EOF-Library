@@ -30,6 +30,3 @@ RUN cd ~/elmerfem && \
 
 # Compile EOF-Library
 RUN EOF-Library/docker/compile.sh
-
-RUN cd elmerfem/build && \
-    ctest -R mhdInterFoamTest_2D

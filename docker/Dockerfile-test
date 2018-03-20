@@ -1,7 +1,4 @@
 FROM eof-library/of5
 
-RUN cp -r EOF-Library/tests/mhdInterFoamTest_2D elmerfem/fem/tests && \
-    cp EOF-Library/libs/OpenFOAM2Elmer/*.F90 elmerfem/fem/tests/mhdInterFoamTest_2D && \
-    cp EOF-Library/libs/Elmer2OpenFOAM/*.F90 elmerfem/fem/tests/mhdInterFoamTest_2D
-
-#WORKDIR cd $HOME/elmerfem/build
+RUN cd elmerfem/build && \
+    ctest -R mhdInterFoamTest_2D
