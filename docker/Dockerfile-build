@@ -1,0 +1,35 @@
+FROM openfoam/openfoam5-paraview54
+
+USER root
+RUN apt-get -y update && \
+    apt-get install -y \
+        gcc \
+        cmake \
+        g++ \
+        gfortran \
+        libopenblas-dev \
+        git
+
+#  Elmer
+RUN git clone https://github.com/ElmerCSC/elmerfem.git
+
+# EOF-Library
+ADD ./ EOF-Library
+
+# Copy test
+RUN cp -r EOF-Library/tests/mhdInterFoamTest_2D elmerfem/fem/tests && \
+    cp EOF-Library/libs/OpenFOAM2Elmer/*.F90 elmerfem/fem/tests/mhdInterFoamTest_2D && \
+    cp EOF-Library/libs/Elmer2OpenFOAM/*.F90 elmerfem/fem/tests/mhdInterFoamTest_2D
+
+# Compile Elmer
+RUN cd ~/elmerfem && \
+    mkdir build && \
+    cd build && \
+    cmake -DWITH_MPI=TRUE -C ../ci/precaches/opts-ubuntu-xenial.cmake ../ && \
+    make -j$(nproc) install
+
+# Compile EOF-Library
+RUN EOF-Library/docker/compile.sh
+
+RUN cd elmerfem/build && \
+    ctest -R mhdInterFoamTest_2D
