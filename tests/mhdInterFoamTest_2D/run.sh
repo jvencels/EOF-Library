@@ -1,5 +1,6 @@
 #!/bin/bash
 
+source /opt/openfoam5/etc/bashrc
 export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
 
 ElmerGrid 2 2 mesh_Elmer -metis 2 -nooverwrite
