@@ -10,14 +10,13 @@ containsElement () {
   return 1
 }
 
-EOFdir='..'            # EOF-Library folder
-SOLVERS='mhdInterFoam' # default solvers for testing
+EOFdir='..' # EOF-Library folder
 
-while getopts "f:v:s" flag; do
+while getopts "f:v:s:" flag; do
   case "$flag" in
     f  ) EOFdir=$OPTARG ;;
     v  ) OFvers=$OPTARG ;;
-    s  ) SOLVERS=${OPTARG} ;;
+    s  ) SOLVERS+=("$OPTARG") ;;
     \? ) echo "Unknown option: -$OPTARG" >&2; exit 1;;
     :  ) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
     *  ) echo "Unexpected option ${flag}. Valid options are -f, -v, -s" && exit 1;;
@@ -46,8 +45,19 @@ echo "Compiling coupler.."
 cd ../coupleElmer
 wclean && wmake
 
-for i in $SOLVERS
+if [ ${#SOLVERS[@]} -eq 0 ]; then
+  SOLVERS="mhdInterFoam" # Default solvers for testing
+fi
+
+echo "Compiling solvers.."
+for i in ${SOLVERS[@]}
 do
-  cd ../"$i"
-  wclean && wmake
+  if test -d ../$i; then
+    echo "$i"
+    cd ../$i
+    wclean && wmake
+  else
+    echo "ERROR: Solver $i does not exist!"
+    exit 1
+  fi
 done
