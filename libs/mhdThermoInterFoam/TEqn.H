@@ -1,5 +1,5 @@
 {
-    volScalarField kappaf = alpha1f*kappa1/cp1 + (scalar(1)-alpha1f)*kappa2/cp2;
+    volScalarField kappaf = alpha1f*kappa1/cp1 + (scalar(1)-alpha1f)*kappa2/cp2 + rho*turbulence->nut()/0.7;
 
     fvScalarMatrix TEqn
     (
