@@ -1,6 +1,6 @@
 services: docker
 before_install:
-- docker build --no-cache -t eof-library/of5 -f docker/Dockerfile-build .
+- docker build --no-cache -t eof-library/full -f docker/Dockerfile-build .
 script:
 - docker build --no-cache -t eof-library/test -f docker/Dockerfile-test .
 - docker run eof-library/test

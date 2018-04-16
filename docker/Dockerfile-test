@@ -1,4 +1,4 @@
-FROM eof-library/of5
+FROM eof-library/full
 
 WORKDIR elmerfem/build
 ENTRYPOINT ["ctest","-L", "EOF"]

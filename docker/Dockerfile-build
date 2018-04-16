@@ -14,7 +14,7 @@ RUN apt-get -y update && \
 RUN git clone https://github.com/ElmerCSC/elmerfem.git
 
 # EOF-Library
-ADD ./ EOF-Library
+ADD --chown=openfoam ./ EOF-Library
 
 # Copy tests
 RUN cd EOF-Library/tests && \
@@ -28,6 +28,10 @@ RUN cd ~/elmerfem && \
     cd build && \
     cmake -DWITH_MPI=TRUE -C ../ci/precaches/opts-ubuntu-xenial.cmake ../ && \
     make -j$(nproc) install
+
+RUN chown -R openfoam elmerfem
+
+USER openfoam
 
 # Compile EOF-Library OF part
 RUN EOF-Library/docker/compile.sh -v 5.0-dev -f $HOME/EOF-Library
