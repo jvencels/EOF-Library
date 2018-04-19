@@ -53,6 +53,6 @@ while (pimple.correctNonOrthogonal())
 // Explicitly relax pressure for momentum corrector
 p.relax();
 
-U = HbyA - rAtU()*fvc::grad(p) + rAU*JxB/rho;
+U = HbyA - rAtU()*(fvc::grad(p) - JxB/rho);
 U.correctBoundaryConditions();
 fvOptions.correct(U);
