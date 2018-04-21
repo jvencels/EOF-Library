@@ -14,7 +14,8 @@ RUN apt-get -y update && \
 RUN git clone https://github.com/ElmerCSC/elmerfem.git
 
 # EOF-Library
-ADD --chown=openfoam ./ EOF-Library
+ADD ./ EOF-Library
+RUN chown -R openfoam:openfoam EOF-Library
 
 # Copy tests
 RUN cd EOF-Library/tests && \
