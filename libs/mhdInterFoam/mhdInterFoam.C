@@ -157,21 +157,15 @@ int main(int argc, char *argv[])
 
         if(doElmer || !runTime.run()) {
             alpha_old = alpha1;
-            double commTime = MPI_Wtime();
 
             // Send fields to Elmer
             sending.sendStatus(runTime.run());
             elcond = alpha1 * elcond_ref;
             sending.sendScalar(elcond);
 
-            Info<< "OpenFOAM2Elmer = " << MPI_Wtime()-commTime << " s" << nl << endl;
-            commTime = MPI_Wtime();
-
             // Receive fields form Elmer
             receiving.sendStatus(runTime.run());
             receiving.recvVector(JxB_recv);
-
-            Info<< "Elmer2OpenFOAM = " << MPI_Wtime()-commTime << " s" << nl << endl;
         }
     }
 

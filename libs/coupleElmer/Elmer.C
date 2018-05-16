@@ -49,6 +49,7 @@ mode_(mode),
 myBoundBox(mesh.points(),false)
 {
     int i, j, k, flag;
+    double commTime = MPI_Wtime();
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -249,6 +250,8 @@ myBoundBox(mesh.points(),false)
             if (ELp[i].nFoundElements == 0) continue;
             MPI_Test_Sleep(ELp[i].reqSend);
         }
+
+        Info<< "OpenFOAM2Elmer Init = " << MPI_Wtime()-commTime << " s" << nl << endl;
     }
 }
 
@@ -256,8 +259,6 @@ myBoundBox(mesh.points(),false)
 void Foam::Elmer::recvScalar(volScalarField& field)
 {
     int i, j;
-
-    Info<< "Receiving scalar field from Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
         if ( ELp[i].nFoundCells == 0 ) continue;
@@ -277,8 +278,6 @@ void Foam::Elmer::recvScalar(volScalarField& field)
 void Foam::Elmer::recvVector(volVectorField& field)
 {
     int i, j, dim;
-
-    Info<< "Receiving vector field from Elmer.." << endl;
 
     for (dim=0; dim<3; dim++) { 
         for ( i=0; i<totElmerRanks; i++ ) {
@@ -300,10 +299,9 @@ void Foam::Elmer::recvVector(volVectorField& field)
 void Foam::Elmer::sendScalar(volScalarField& field)
 {
     int i, j;
+    double commTime = MPI_Wtime();
 
     autoPtr<interpolation<scalar> > interpField = interpolation<scalar>::New(interpolationDict, field);
-
-    Info<< "Sending scalar field to Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
         if ( ELp[i].nFoundElements == 0 ) continue;
@@ -318,16 +316,17 @@ void Foam::Elmer::sendScalar(volScalarField& field)
         if ( ELp[i].nFoundElements == 0 ) continue;
         MPI_Test_Sleep(ELp[i].reqSend);
     }
+
+    Info<< "OpenFOAM2Elmer: scalar = " << MPI_Wtime()-commTime << " s" << nl << endl;
 }
 
 
 void Foam::Elmer::sendVector(volVectorField& field)
 {
     int i, j;
+    double commTime = MPI_Wtime();
 
     autoPtr<interpolation<vector> > interpField = interpolation<vector>::New(interpolationDict, field);
-
-    Info<< "Sending vector field to Elmer.." << endl;
 
     for ( i=0; i<totElmerRanks; i++ ) {
         if ( ELp[i].nFoundElements == 0 ) continue;
@@ -352,6 +351,8 @@ void Foam::Elmer::sendVector(volVectorField& field)
         if ( ELp[i].nFoundElements == 0 ) continue;
         MPI_Test_Sleep(ELp[i].reqSend);
     }
+
+    Info<< "OpenFOAM2Elmer: vector = " << MPI_Wtime()-commTime << " s" << nl << endl;
 }
 
 
