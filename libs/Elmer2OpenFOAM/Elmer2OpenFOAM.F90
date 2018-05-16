@@ -139,6 +139,8 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
   INTEGER :: i, j, ierr, OFstatus
   INTEGER :: status(MPI_STATUS_SIZE)
   LOGICAL :: Found
+  REAL(KIND=dp) :: commTime
+  CHARACTER(LEN=15) :: timeStr
   
   INTERFACE
     SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, NewVariables, &
@@ -160,6 +162,8 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
   !------------------------------------------------------------------------------  
 
   CALL Info('Elmer2OpenFOAMSolver','-----------------------------------------', Level=4 )
+
+  commTime = MPI_WTIME()
 
   ! The variable containing the field contributions
   !--------------------------------------------------------------------------
@@ -318,6 +322,7 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
   ! Receive simulation status
   CALL MPI_IRECV( OFstatus, 1, MPI_INTEGER, OFp(0) % globalRank, 799, MPI_COMM_WORLD, OFp(0) % reqRecv, ierr)
   CALL MPI_TEST_SLEEP(OFp(0) % reqRecv, ierr)
+
   IF (OFstatus.NE.1) THEN
     CALL Info('Elmer2OpenFOAM','Elmer has last iteration!', Level=3 )
     exitcond = ListGetCReal( CurrentModel % Simulation,'Exit Condition',Found)
@@ -349,6 +354,9 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
   END DO
 
   VISITED = .TRUE.
+  write(timeStr , '(F9.5)') MPI_WTIME() - commTime
+
+  CALL Info('Elmer2OpenFOAM',' = '//TRIM(timeStr)//' s', Level=3 )
 
   CALL Info('Elmer2OpenFOAMSolver','All done', Level=4 )
   CALL Info('Elmer2OpenFOAMSolver','-----------------------------------------', Level=4 )
