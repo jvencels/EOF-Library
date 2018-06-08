@@ -48,6 +48,22 @@ mesh_(mesh),
 mode_(mode),
 myBoundBox(mesh.points(),false)
 {
+    initialize();
+}
+
+
+Foam::Elmer::Elmer(const fvMesh& mesh, int mode, bool init)
+:
+mesh_(mesh),
+mode_(mode),
+myBoundBox(mesh.points(),false)
+{
+    if(init) initialize();
+}
+
+
+void Foam::Elmer::initialize()
+{
     int i, j, k, flag;
     double commTime = MPI_Wtime();
 
@@ -167,7 +183,7 @@ myBoundBox(mesh.points(),false)
     if (mode_==1) {
 
         // Extract the dictionary from the database
-        const dictionary& fvSchemes = mesh.lookupObject<IOdictionary>
+        const dictionary& fvSchemes = mesh_.lookupObject<IOdictionary>
         (
            "fvSchemes"
         );
@@ -210,7 +226,7 @@ myBoundBox(mesh.points(),false)
             for ( j=0; j<ELp[i].nElem; j++ ) {
                 point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
 
-                ELp[i].foundElement[j] = mesh.findCell(tmpPoint);
+                ELp[i].foundElement[j] = mesh_.findCell(tmpPoint);
                 if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
             }
             //Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;

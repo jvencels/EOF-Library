@@ -32,7 +32,5 @@ RUN cd ~/elmerfem && \
 
 RUN chown -R openfoam elmerfem
 
-USER openfoam
-
 # Compile EOF-Library OF part
 RUN EOF-Library/docker/compile.sh -v 5.0-dev -f $HOME/EOF-Library

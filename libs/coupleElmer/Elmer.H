@@ -75,6 +75,12 @@ public:
         //- Construct and initialize
         Elmer(const fvMesh& mesh, int mode);
 
+        //- Construct and initialize if needed
+        Elmer(const fvMesh& mesh, int mode, bool init);
+
+        //- Initialize
+        void initialize();
+
         //- Send interpolated scalar field at element centres to Elmer
         void sendScalar(volScalarField& field);
 
