@@ -45,10 +45,6 @@ echo "Compiling coupler.."
 cd ../coupleElmer
 wclean && wmake
 
-if [ ${#SOLVERS[@]} -eq 0 ]; then
-  SOLVERS="mhdInterFoam" # Default solvers for testing
-fi
-
 echo "Compiling solvers.."
 for i in ${SOLVERS[@]}
 do
