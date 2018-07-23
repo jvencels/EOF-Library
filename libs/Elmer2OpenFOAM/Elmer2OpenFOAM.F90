@@ -108,7 +108,7 @@ SUBROUTINE findOverlappingBoxes()
 
   CALL MPI_Bcast(OF_EL_overlap, totOFRanks*totLocalRanks, MPI_INTEGER, 0, ELMER_COMM_WORLD, ierr)
 
-  DO i=0,totOFRanks
+  DO i=0,totOFRanks-1
     OFp(i) % boxOverlap = (OF_EL_overlap(myLocalRank,i)==1)
   END DO
 
