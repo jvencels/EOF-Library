@@ -87,7 +87,7 @@ void Foam::Elmer::initialize()
         ElmerRanksStart = 0;
     }
 
-    ELp = new (std::nothrow) ElmerProc_t[totElmerRanks];
+    ELp = new ElmerProc_t[totElmerRanks];
 
     if (ELp == nullptr) {
         FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError);
@@ -97,9 +97,9 @@ void Foam::Elmer::initialize()
         ELp[i].globalRank = i+ElmerRanksStart;
     }
 
-    OFboundBoxes = new (std::nothrow) double[totLocalRanks*2*3];
-    ELboundBoxes = new (std::nothrow) double[totElmerRanks*2*3];
-    OF_EL_overlap = new (std::nothrow) int[totLocalRanks*totElmerRanks];
+    OFboundBoxes = new double[totLocalRanks*2*3];
+    ELboundBoxes = new double[totElmerRanks*2*3];
+    OF_EL_overlap = new int[totLocalRanks*totElmerRanks];
     findOverlappingBoxes();
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -107,9 +107,9 @@ void Foam::Elmer::initialize()
     if (mode_==-1) {
         nCells = mesh_.cells().size();
 
-        cellCentres_x = new (std::nothrow) double[nCells];
-        cellCentres_y = new (std::nothrow) double[nCells];
-        cellCentres_z = new (std::nothrow) double[nCells];
+        cellCentres_x = new double[nCells];
+        cellCentres_y = new double[nCells];
+        cellCentres_z = new double[nCells];
 
         if (cellCentres_x == nullptr || cellCentres_y == nullptr || cellCentres_z == nullptr) {
             FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError);
@@ -161,8 +161,8 @@ void Foam::Elmer::initialize()
 
         for ( i=0; i<totElmerRanks; i++ ) {
             if ( ELp[i].nFoundCells == 0 ) continue;
-            ELp[i].foundCellsIndx = new (std::nothrow) int[ELp[i].nFoundCells];
-            ELp[i].recvBuffer0 = new (std::nothrow) double[ELp[i].nFoundCells];
+            ELp[i].foundCellsIndx = new int[ELp[i].nFoundCells];
+            ELp[i].recvBuffer0 = new double[ELp[i].nFoundCells];
 
             if (ELp[i].foundCellsIndx == nullptr || ELp[i].recvBuffer0 == nullptr) {
                 FatalErrorInFunction << "Failed to allocate memory" << Foam::abort(FatalError);
@@ -198,10 +198,10 @@ void Foam::Elmer::initialize()
         for ( i=0; i<totElmerRanks; i++ ) {
             if (!ELp[i].boxOverlap) continue;
             MPI_Test_Sleep(ELp[i].reqRecv);
-            ELp[i].sendBuffer0 = new (std::nothrow) double[ELp[i].nElem];
-            ELp[i].sendBuffer1 = new (std::nothrow) double[ELp[i].nElem];
-            ELp[i].sendBuffer2 = new (std::nothrow) double[ELp[i].nElem];
-            ELp[i].foundElement = new (std::nothrow) label[ELp[i].nElem];
+            ELp[i].sendBuffer0 = new double[ELp[i].nElem];
+            ELp[i].sendBuffer1 = new double[ELp[i].nElem];
+            ELp[i].sendBuffer2 = new double[ELp[i].nElem];
+            ELp[i].foundElement = new label[ELp[i].nElem];
 
             if (ELp[i].sendBuffer0 == nullptr || ELp[i].sendBuffer1 == nullptr || 
                 ELp[i].sendBuffer2 == nullptr || ELp[i].foundElement == nullptr) {
@@ -238,9 +238,9 @@ void Foam::Elmer::initialize()
             MPI_Test_Sleep(ELp[i].reqSend);
 
             if (ELp[i].nFoundElements == 0) continue;
-            ELp[i].foundElementIndx = new (std::nothrow) int[ELp[i].nFoundElements];
-            ELp[i].foundElementCellIndx = new (std::nothrow) int[ELp[i].nFoundElements];
-            ELp[i].positions = new (std::nothrow) point[ELp[i].nFoundElements];
+            ELp[i].foundElementIndx = new int[ELp[i].nFoundElements];
+            ELp[i].foundElementCellIndx = new int[ELp[i].nFoundElements];
+            ELp[i].positions = new point[ELp[i].nFoundElements];
 
             if (ELp[i].foundElementIndx == nullptr ||
                 ELp[i].foundElementCellIndx == nullptr ||
