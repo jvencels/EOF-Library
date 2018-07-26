@@ -278,7 +278,14 @@ SUBROUTINE Elmer2OpenFOAMSolver( Model,Solver,dt,TransientSimulation )
       IF(.NOT.OFp(i) % boxOverlap) CYCLE
       ! wait for z coordinates
       CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
-      IF ( CoordinateSystemDimension() == 2 ) OFp(i) % OFMesh % Nodes % z = 0
+
+      IF ( CoordinateSystemDimension() == 2 ) THEN
+        IF ( CurrentCoordinateSystem() == AxisSymmetric .OR. &
+             CurrentCoordinateSystem() == CylindricSymmetric ) THEN
+          OFp(i) % OFMesh % Nodes % x = SQRT(OFp(i) % OFMesh % Nodes % x**2 + OFp(i) % OFMesh % Nodes % z**2)
+        END IF
+        OFp(i) % OFMesh % Nodes % z = 0
+      END IF
 
       CALL InterpolateMeshToMeshQ( OldMesh          = Mesh, &
                                    NewMesh          = OFp(i) % OFMesh, &
