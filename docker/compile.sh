@@ -1,8 +1,5 @@
 #!/bin/bash
 
-source /opt/openfoam5/etc/bashrc
-source ~/.bashrc
-
 containsElement () {
   local e match="$1"
   shift
@@ -23,7 +20,7 @@ while getopts "f:v:s:" flag; do
   esac
 done
 
-validOFvers=("2.4.0" "3.0.1" "4.1" "5.0-stable" "5.0-dev")
+validOFvers=("2.4.0" "3.0.1" "4.1" "5.0-stable" "5.0-dev" "6")
 
 cd $EOFdir/libs/commSplit
 echo | pwd

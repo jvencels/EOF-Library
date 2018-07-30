@@ -33,4 +33,5 @@ RUN cd ~/elmerfem && \
 RUN chown -R openfoam elmerfem
 
 # Compile EOF-Library OF part
-RUN EOF-Library/docker/compile.sh -v 5.0-dev -f $HOME/EOF-Library -s mhdInterFoam
+RUN /bin/bash -c "source /opt/openfoam5/etc/bashrc && \
+    EOF-Library/docker/compile.sh -v 5.0-dev -f $HOME/EOF-Library -s mhdInterFoam"
