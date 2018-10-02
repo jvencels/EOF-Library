@@ -443,11 +443,15 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       IF (OFp(i) % nFoundElements == 0) CYCLE
       CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
 
+#ifndef SKIP_FP_FIX
       ! Fix floating point exception
       WHERE (OFp(i) % recvValues<EPSILON(1.e0) &
                        .AND. OFp(i) % recvValues > -EPSILON(1.e0))
         OFp(i) % recvValues = 0
       END WHERE
+#else
+#warning "Dirty fix for floating point exception is disabled!"
+#endif
 
       ! Directly interpolate to the points needed, don't reinterpolate
       DO k = 1, OFp(i) % nFoundElements

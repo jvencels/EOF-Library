@@ -64,7 +64,7 @@ myBoundBox(mesh.points(),false)
 
 void Foam::Elmer::initialize()
 {
-    int i, j, k, flag;
+    int i, j, k;
     double commTime = MPI_Wtime();
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -226,7 +226,14 @@ void Foam::Elmer::initialize()
             for ( j=0; j<ELp[i].nElem; j++ ) {
                 point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
 
+#if (FOAM_MAJOR_VERSION == 2)
+#warning "You are using OF v2.x.x. findCell uses slow search algorithm, be patient!"
+                if(j%1000==0) Info<< "Proc #" << i << "  " << 100.0*j/ELp[i].nElem << "%" << endl;
+                ELp[i].foundElement[j] = mesh_.findCell(tmpPoint,polyMesh::FACEPLANES);
+#else
                 ELp[i].foundElement[j] = mesh_.findCell(tmpPoint);
+#endif
+
                 if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
             }
             //Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;

@@ -1,5 +1,5 @@
 sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
 sinclude $(RULES)/mplib$(WM_MPLIB)
 
-EXE_INC  = $(PFLAGS) $(PINC)
+EXE_INC  = $(PFLAGS) $(PINC) -Wno-old-style-cast
 LIB_LIBS = $(PLIBS)
