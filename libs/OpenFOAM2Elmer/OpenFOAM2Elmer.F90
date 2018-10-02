@@ -260,6 +260,9 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     ! specified by the 1st variable to be interpolated.
     nElements = size( Var % Values )
 
+    ALLOCATE( commElementX(nElements),  &
+              commElementY(nElements),  &
+              commElementZ(nElements) )
 
     VarName = ListGetString( Params,'Interpolate Coordinate', UserDefinedCoordinates ) 
     
@@ -276,16 +279,12 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       IF( SIZE( VarCoord % Values ) / 3  /= nElements ) THEN
         CALL Fatal('OpenFOAM2ElmerSolver','Size of coordinates should match size of variable x 3!')
       END IF
-      commElementX => VarCoord % Values(1::3)
-      commElementY => VarCoord % Values(2::3)
-      commElementZ => VarCoord % Values(3::3)
+      commElementX = VarCoord % Values(1::3)
+      commElementY = VarCoord % Values(2::3)
+      commElementZ = VarCoord % Values(3::3)
 
     ELSE IF (nElements > 0) THEN
       CALL Info('OpenFOAM2ElmerSolver','Allocating coordinates for interpolation')
-
-      ALLOCATE( commElementX(nElements),  &
-          commElementY(nElements),  &
-          commElementZ(nElements) )
 
       IF( Var % TYPE == Variable_on_nodes ) THEN
 
@@ -394,8 +393,10 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
 
       IF (OFp(i) % nFoundElements == 0) CYCLE
       totElementsFound = totElementsFound + OFp(i) % nFoundElements
+
       ALLOCATE ( OFp(i) % foundElementIndx(OFp(i) % nFoundElements), &
-          OFp(i) % recvValues(OFp(i) % nFoundElements))
+                 OFp(i) % recvValues(OFp(i) % nFoundElements))
+
       ! Indexes of found elements
       CALL MPI_IRECV(OFp(i) % foundElementIndx, OFp(i) % nFoundElements, MPI_INTEGER, &
           OFp(i) % globalRank, 894, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
