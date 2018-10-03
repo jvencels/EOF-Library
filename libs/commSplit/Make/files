@@ -1,6 +1,8 @@
-UOPwrite.C
-UIPread.C
-UPstream.C
-PstreamGlobals.C
+FOAM_MAJOR_VERSION=$(firstword $(subst ., ,$(WM_PROJECT_VERSION)))
+
+$(FOAM_MAJOR_VERSION)/UOPwrite.C
+$(FOAM_MAJOR_VERSION)/UIPread.C
+$(FOAM_MAJOR_VERSION)/UPstream.C
+$(FOAM_MAJOR_VERSION)/PstreamGlobals.C
 
 LIB = $(FOAM_USER_LIBBIN)/libPstream

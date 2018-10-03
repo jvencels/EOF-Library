@@ -20,17 +20,14 @@ while getopts "f:v:s:" flag; do
   esac
 done
 
-validOFvers=("2.4.0" "3.0.1" "4.1" "5.0-stable" "5.0-dev" "6")
+validOFvers=("2.4.0" "3.0.1" "4.1" "5.0" "6" "dev" "")
 
 cd $EOFdir/libs/commSplit
 echo | pwd
 
 if containsElement "$OFvers" "${validOFvers[@]}"; then
   echo "Configuring EOF-Library for OpenFOAM version: $OFvers"
-  cp $OFvers/* .
   wclean && wmake
-elif [ "$OFvers" == "dev" ]; then
-  echo "Configuring EOF-Library for OpenFOAM version: dev"
 else
 	echo "ERROR: OpenFOAM version $OFvers not supported. Valid versions are:"
     printf "%s\n" "${validOFvers[@]}"
