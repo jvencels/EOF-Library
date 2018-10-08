@@ -1,0 +1,10 @@
+! ----- names for bodies -----
+$ Box_1 = 1
+! ----- names for boundaries -----
+$ minX = 2
+$ minY = 3
+$ minZ = 4
+$ maxZ = 5
+$ maxY = 6
+$ maxX = 7
+$ empty = 8

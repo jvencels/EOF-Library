@@ -1,0 +1,148 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+|       o          |                                                          |
+|    o     o       | HELYX-OS                                                  |
+|   o   O   o      | Version: v2.3.1                                           |
+|    o     o       | Web:     http://www.engys.com                            |
+|       o          |                                                          |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object snappyHexMeshDict;
+}
+
+    castellatedMesh true;
+    snap true;
+    addLayers false;
+
+    geometry
+    {
+        meltRegion.stl
+        {
+            type triSurfaceMesh;
+            name meltRegion;
+
+            regions
+            {
+                left
+                {
+                    name leftBC;
+                }
+                out
+                {
+                    name outBC;
+                }
+                right
+                {
+                    name rightBC;
+                }
+            }
+        }
+    }
+
+    castellatedMeshControls
+    {
+        features
+        (
+        );
+
+        refinementSurfaces
+        {
+            meltRegion
+            {
+                level (0 0);
+                regions
+                {
+                    left
+                    {
+                        level (0 0);
+                    }
+                    out
+                    {
+                        level (0 0);
+                    }
+                    right
+                    {
+                        level (0 0);
+                    }
+                }     
+            }
+        }
+
+        refinementRegions
+        {
+        }
+
+        locationInMesh (0.01 0 0);
+        maxLocalCells 10000000;
+        maxGlobalCells 20000000;
+        minRefinementCells 0;
+        nCellsBetweenLevels 1;
+        resolveFeatureAngle 30.0;
+        allowFreeStandingZoneFaces true;
+        planarAngle 30.0;
+        maxLoadUnbalance 0.1;
+    }
+
+    snapControls
+    {
+        nSolveIter 50;
+        nSmoothPatch 5;
+        tolerance 1.0;
+        nRelaxIter 10;
+        nFeatureSnapIter 20;
+        implicitFeatureSnap false;
+        explicitFeatureSnap true;
+        multiRegionFeatureSnap false;
+    }
+
+    addLayersControls
+    {
+        layers
+        {
+        }
+
+        relativeSizes true;
+        expansionRatio 1.0;
+        finalLayerThickness 0.3;
+        minThickness 0.25;
+        nGrow 0;
+        featureAngle 130.0;
+        slipFeatureAngle 30.0;
+        nRelaxIter 5;
+        nSmoothSurfaceNormals 1;
+        nSmoothNormals 3;
+        nSmoothThickness 10;
+        maxFaceThicknessRatio 0.5;
+        maxThicknessToMedialRatio 0.3;
+        minMedialAxisAngle 90;
+        nBufferCellsNoExtrude 0;
+        nLayerIter 50;
+        nRelaxedIter 20;
+    }
+
+    meshQualityControls
+    {
+        maxNonOrtho 65.0;
+        maxBoundarySkewness 20;
+        maxInternalSkewness 4;
+        maxConcave 80.0;
+        minFlatness 0.5;
+        minVol 1.0E-13;
+        minTetQuality 1.0E-15;
+        minArea -1.0;
+        minTwist 0.02;
+        minDeterminant 0.001;
+        minFaceWeight 0.05;
+        minVolRatio 0.01;
+        minTriangleTwist -1.0;
+        nSmoothScale 4;
+        errorReduction 0.75;
+    }
+
+    debug 0;
+    mergeTolerance 1.0E-6;
+    autoBlockMesh true;

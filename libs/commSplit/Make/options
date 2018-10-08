@@ -1,5 +1,12 @@
 sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
 sinclude $(RULES)/mplib$(WM_MPLIB)
 
-EXE_INC  = $(PFLAGS) $(PINC) -Wno-old-style-cast
+ifeq ($(OF5DEV)),)
+    EOF_INC =
+else
+    $(info ************  OF version 5 dev ************)
+    EOF_INC = -DOF5DEV
+endif
+
+EXE_INC  = $(PFLAGS) $(PINC) -Wno-old-style-cast $(EOF_INC)
 LIB_LIBS = $(PLIBS)

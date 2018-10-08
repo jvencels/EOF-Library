@@ -20,14 +20,20 @@ while getopts "f:v:s:" flag; do
   esac
 done
 
-validOFvers=("2.4.0" "3.0.1" "4.1" "5.0" "6" "dev" "")
+validOFvers=("2.4.0" "3.0.1" "4.1" "5.0" "5.0-dev" "6" "dev" "")
 
 cd $EOFdir/libs/commSplit
 echo | pwd
 
 if containsElement "$OFvers" "${validOFvers[@]}"; then
   echo "Configuring EOF-Library for OpenFOAM version: $OFvers"
-  wclean && wmake
+  wclean
+  if ["$OFvers"=="6"] || ["$OFvers"=="dev"]; then
+    continue
+  elif ["$OFvers"=="5.0-dev"]; then
+    export OF5DEV=1
+  fi
+  wmake
 else
 	echo "ERROR: OpenFOAM version $OFvers not supported. Valid versions are:"
     printf "%s\n" "${validOFvers[@]}"
@@ -40,12 +46,12 @@ cd ../coupleElmer
 wclean && wmake
 
 echo "Compiling solvers.."
+cd ../../solvers
 for i in ${SOLVERS[@]}
 do
-  if test -d ../$i; then
+  if test -d $i; then
     echo "$i"
-    cd ../$i
-    wclean && wmake
+    wclean $i && wmake $i
   else
     echo "ERROR: Solver $i does not exist!"
     exit 1

@@ -19,19 +19,18 @@ RUN chown -R openfoam:openfoam EOF-Library
 
 # Copy tests
 RUN cd EOF-Library/tests && \
-    for dir in *; do [ -d "$dir" ] && cp ../libs/OpenFOAM2Elmer/*.F90 "$dir" ; done && \
-    for dir in *; do [ -d "$dir" ] && cp ../libs/Elmer2OpenFOAM/*.F90 "$dir" ; done && \
+    for dir in *; do [ -d "$dir" ] && cp ../libs/*.F90 "$dir" ; done && \
     for dir in *; do [ -d "$dir" ] && cp -r "$dir" ~/elmerfem/fem/tests ; done
 
 # Compile Elmer
 RUN cd ~/elmerfem && \
     mkdir build && \
     cd build && \
-    cmake -DWITH_MPI=TRUE -C ../ci/precaches/opts-ubuntu-xenial.cmake ../ && \
+    cmake -DWITH_MPI=TRUE -C ../ci/precaches/opts-ubuntu-bionic.cmake ../ && \
     make -j$(nproc) install
 
 RUN chown -R openfoam elmerfem
 
 # Compile EOF-Library OF part
 RUN /bin/bash -c "source /opt/openfoam5/etc/bashrc && \
-    EOF-Library/docker/compile.sh -f $HOME/EOF-Library -s mhdInterFoam"
+    EOF-Library/docker/compile.sh -v 5.0-dev -f $HOME/EOF-Library -s interpolationTestFoam -s mhdInterFoam"
