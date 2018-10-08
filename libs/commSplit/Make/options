@@ -1,7 +1,7 @@
 sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
 sinclude $(RULES)/mplib$(WM_MPLIB)
 
-ifeq ($(OF5DEV)),)
+ifeq ($(strip $(OF5DEV)),)
     EOF_INC =
 else
     $(info ************  OF version 5 dev ************)

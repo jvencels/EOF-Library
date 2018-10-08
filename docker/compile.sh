@@ -28,10 +28,11 @@ echo | pwd
 if containsElement "$OFvers" "${validOFvers[@]}"; then
   echo "Configuring EOF-Library for OpenFOAM version: $OFvers"
   wclean
-  if ["$OFvers"=="6"] || ["$OFvers"=="dev"]; then
+  if [ "$OFvers" = "6" ] || [ "$OFvers" = "dev" ]; then
     continue
-  elif ["$OFvers"=="5.0-dev"]; then
-    export OF5DEV=1
+  elif [ "$OFvers" = "5.0-dev" ]; then
+    echo "Applying OF5DEV patch!"
+    export OF5DEV=TRUE
   fi
   wmake
 else
