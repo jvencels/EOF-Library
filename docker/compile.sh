@@ -32,7 +32,7 @@ if containsElement "$OFvers" "${validOFvers[@]}"; then
     continue
   elif [ "$OFvers" = "5.0-dev" ]; then
     echo "Applying OF5DEV patch!"
-    export OF5DEV=TRUE
+    export OF5DEV=OF5DEV
   fi
   wmake
 else

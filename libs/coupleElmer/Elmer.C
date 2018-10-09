@@ -66,6 +66,7 @@ void Foam::Elmer::initialize()
 {
     int i, j, k;
     double commTime = MPI_Wtime();
+    double localTime = 0;
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -191,6 +192,8 @@ void Foam::Elmer::initialize()
         // Exctract subdictionary from the main dictionary
         interpolationDict = fvSchemes.subDict("interpolationSchemes");
 
+        int nCommElem = 0;
+
         for ( i=0; i<totElmerRanks; i++ ) {
             if (!ELp[i].boxOverlap) continue;
             MPI_Irecv(&ELp[i].nElem, 1, MPI_INT, ELp[i].globalRank, 899, MPI_COMM_WORLD, &ELp[i].reqRecv);
@@ -198,6 +201,9 @@ void Foam::Elmer::initialize()
         for ( i=0; i<totElmerRanks; i++ ) {
             if (!ELp[i].boxOverlap) continue;
             MPI_Test_Sleep(ELp[i].reqRecv);
+
+            nCommElem += ELp[i].nElem;
+
             ELp[i].sendBuffer0 = new double[ELp[i].nElem];
             ELp[i].sendBuffer1 = new double[ELp[i].nElem];
             ELp[i].sendBuffer2 = new double[ELp[i].nElem];
@@ -218,6 +224,9 @@ void Foam::Elmer::initialize()
                       MPI_COMM_WORLD, &ELp[i].reqRecv);
         }
 
+        int nElemDone = 0;
+        int nElemDonePrev = 0;
+
         Info<< "Searching for cells.." << endl;
         for ( i=0; i<totElmerRanks; i++ ) {
             ELp[i].nFoundElements = 0; // keep this
@@ -226,15 +235,23 @@ void Foam::Elmer::initialize()
             for ( j=0; j<ELp[i].nElem; j++ ) {
                 point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
 
+                if(MPI_Wtime()-localTime>30) {
+                    Pout << 100.0*nElemDone/nCommElem << "% done, search speed "
+                         << 2*(nElemDone-nElemDonePrev) << " points/min, remaining "
+                         << nCommElem-nElemDone << " points" << endl;
+                    localTime = MPI_Wtime();
+                    nElemDonePrev = nElemDone;
+                }
+
 #if (FOAM_MAJOR_VERSION == 2)
 #warning "You are using OF v2.x.x. findCell uses slow search algorithm, be patient!"
-                if(j%1000==0) Info<< "Proc #" << i << "  " << 100.0*j/ELp[i].nElem << "%" << endl;
                 ELp[i].foundElement[j] = mesh_.findCell(tmpPoint,polyMesh::FACEPLANES);
 #else
                 ELp[i].foundElement[j] = mesh_.findCell(tmpPoint);
 #endif
 
                 if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
+                nElemDone++;
             }
             //Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
             MPI_Isend(&ELp[i].nFoundElements, 1, MPI_INT, ELp[i].globalRank, 895,
@@ -274,6 +291,7 @@ void Foam::Elmer::initialize()
             MPI_Test_Sleep(ELp[i].reqSend);
         }
 
+        MPI_Barrier(PstreamGlobals::MPI_COMM_FOAM);
         Info<< "OpenFOAM2Elmer Init = " << MPI_Wtime()-commTime << " s" << nl << endl;
     }
 }
