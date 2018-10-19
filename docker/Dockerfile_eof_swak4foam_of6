@@ -1,0 +1,48 @@
+FROM hfdresearch/swak4foamandpyfoam:latest-v6.0
+
+USER root
+RUN apt-get -y update && \
+    apt-get install -y \
+        gcc \
+        cmake \
+        g++ \
+        gfortran \
+        libopenblas-dev \
+        git
+
+#  Elmer
+RUN git clone https://github.com/ElmerCSC/elmerfem.git
+RUN chown -R openfoam:openfoam elmerfem
+
+# Compile Elmer
+RUN cd elmerfem && \
+    mkdir build && \
+    cd build && \
+    cmake -DWITH_MPI=TRUE -C ../ci/precaches/opts-ubuntu-bionic.cmake ../ && \
+    make -j install
+
+# Writting stuff to .bashrc
+RUN echo "\n# Lines from docker/Dockerfile-build" >> .bashrc && \
+    echo "## OpenFOAM" >> .bashrc && \
+    echo "source /opt/openfoam6/etc/bashrc" >> .bashrc && \
+    echo "export LD_LIBRARY_PATH=\$FOAM_USER_LIBBIN:\$LD_LIBRARY_PATH" >> .bashrc && \
+    echo "\n## Elmer FEM" >> .bashrc && \
+    echo "export ELMER_SRC=\$HOME/elmerfem" >> .bashrc && \
+    echo "export ELMER_BUILD=\$ELMER_SRC/build" >> .bashrc && \
+    echo "\n## EOF-Library" >> .bashrc && \
+    echo "export EOF_HOME=\$HOME/EOF-Library" >> .bashrc && \
+    echo "export EOF_SRC=\$EOF_HOME/libs" >> .bashrc && \
+    echo "export LD_LIBRARY_PATH=\$EOF_SRC:\$LD_LIBRARY_PATH" >> .bashrc && \
+    echo "\n## Updating Elmer and EOF-Library" >> .bashrc && \
+    echo "alias elmerUpdate='git -C \$ELMER_SRC pull; make install -C \$ELMER_BUILD'" >> .bashrc && \
+    echo "alias eofUpdate='git -C \$EOF_HOME pull; wmake \$EOF_SRC/coupleElmer; \\" >> .bashrc && \
+    echo "elmerf90 -o \$EOF_SRC/Elmer2OpenFOAM.so -J\$EOF_SRC \$EOF_SRC/Elmer2OpenFOAM.F90; \\" >> .bashrc && \
+    echo "elmerf90 -o \$EOF_SRC/OpenFOAM2Elmer.so -J\$EOF_SRC \$EOF_SRC/OpenFOAM2Elmer.F90'" >> .bashrc
+
+# EOF-Library
+RUN git clone https://github.com/jvencels/EOF-Library.git
+RUN chown -R openfoam:openfoam EOF-Library
+
+ENTRYPOINT /bin/bash -c /entry.sh
+
+

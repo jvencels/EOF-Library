@@ -39,20 +39,12 @@ Address:   University of Latvia
 #include "Elmer.H"
 #include <new>
 #include "interpolation.H"
+#include "dynamicFvMesh.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-Foam::Elmer::Elmer(const fvMesh& mesh, int mode)
-:
-mesh_(mesh),
-mode_(mode),
-myBoundBox(mesh.points(),false)
-{
-    initialize();
-}
-
-
-Foam::Elmer::Elmer(const fvMesh& mesh, int mode, bool init)
+template <class meshT>
+Foam::Elmer<meshT>::Elmer(const meshT& mesh, int mode, bool init)
 :
 mesh_(mesh),
 mode_(mode),
@@ -62,7 +54,8 @@ myBoundBox(mesh.points(),false)
 }
 
 
-void Foam::Elmer::initialize()
+template <class meshT>
+void Foam::Elmer<meshT>::initialize()
 {
     int i, j, k;
     double commTime = MPI_Wtime();
@@ -184,7 +177,7 @@ void Foam::Elmer::initialize()
     if (mode_==1) {
 
         // Extract the dictionary from the database
-        const dictionary& fvSchemes = mesh_.lookupObject<IOdictionary>
+        const dictionary& fvSchemes = mesh_.template lookupObject<IOdictionary>
         (
            "fvSchemes"
         );
@@ -235,7 +228,8 @@ void Foam::Elmer::initialize()
             for ( j=0; j<ELp[i].nElem; j++ ) {
                 point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
 
-                if(MPI_Wtime()-localTime>30) {
+                nElemDone++;
+                if(MPI_Wtime()-localTime>30 || nElemDone==nCommElem) {
                     Pout << 100.0*nElemDone/nCommElem << "% done, search speed "
                          << 2*(nElemDone-nElemDonePrev) << " points/min, remaining "
                          << nCommElem-nElemDone << " points" << endl;
@@ -251,7 +245,6 @@ void Foam::Elmer::initialize()
 #endif
 
                 if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
-                nElemDone++;
             }
             //Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
             MPI_Isend(&ELp[i].nFoundElements, 1, MPI_INT, ELp[i].globalRank, 895,
@@ -297,7 +290,8 @@ void Foam::Elmer::initialize()
 }
 
 
-void Foam::Elmer::recvScalar(volScalarField& field)
+template <class meshT>
+void Foam::Elmer<meshT>::recvScalar(volScalarField& field)
 {
     int i, j;
 
@@ -316,7 +310,8 @@ void Foam::Elmer::recvScalar(volScalarField& field)
 }
 
 
-void Foam::Elmer::recvVector(volVectorField& field)
+template <class meshT>
+void Foam::Elmer<meshT>::recvVector(volVectorField& field)
 {
     int i, j, dim;
 
@@ -337,7 +332,8 @@ void Foam::Elmer::recvVector(volVectorField& field)
 }
 
 
-void Foam::Elmer::sendScalar(volScalarField& field)
+template <class meshT>
+void Foam::Elmer<meshT>::sendScalar(volScalarField& field)
 {
     int i, j;
     double commTime = MPI_Wtime();
@@ -362,7 +358,8 @@ void Foam::Elmer::sendScalar(volScalarField& field)
 }
 
 
-void Foam::Elmer::sendVector(volVectorField& field)
+template <class meshT>
+void Foam::Elmer<meshT>::sendVector(volVectorField& field)
 {
     int i, j;
     double commTime = MPI_Wtime();
@@ -397,7 +394,8 @@ void Foam::Elmer::sendVector(volVectorField& field)
 }
 
 
-void Foam::Elmer::sendStatus(int status)
+template <class meshT>
+void Foam::Elmer<meshT>::sendStatus(int status)
 {
     int i;
 
@@ -412,7 +410,8 @@ void Foam::Elmer::sendStatus(int status)
 }
 
 
-void Foam::Elmer::findOverlappingBoxes()
+template <class meshT>
+void Foam::Elmer<meshT>::findOverlappingBoxes()
 {
     int OFoffset = myLocalRank*totElmerRanks;
 
@@ -450,7 +449,8 @@ void Foam::Elmer::findOverlappingBoxes()
 }
 
 
-void Foam::Elmer::MPI_Test_Sleep(MPI_Request& req)
+template <class meshT>
+void Foam::Elmer<meshT>::MPI_Test_Sleep(MPI_Request& req)
 {
     int flag;
 
@@ -460,5 +460,9 @@ void Foam::Elmer::MPI_Test_Sleep(MPI_Request& req)
         nanosleep((const struct timespec[]){{0, 1000000L}}, NULL);
     }
 }
+
+// explicit instantiations
+template class Elmer<fvMesh>;
+template class Elmer<dynamicFvMesh>;
 
 // ************************************************************************* //

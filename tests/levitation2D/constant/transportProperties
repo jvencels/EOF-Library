@@ -20,18 +20,25 @@ phases (melt air);
 melt
 {
     transportModel  Newtonian;
-    nu              [0 2 -1 0 0 0 0] 1e-4;
-    rho             [1 -3 0 0 0 0 0] 2380.0;
+    nu              [0  2 -1 0 0 0 0] 1e-4;
+    rho             [1 -3  0 0 0 0 0] 2380.0;
 }
 
 air
 {
     transportModel  Newtonian;
-    nu              [0 2 -1 0 0 0 0] 1e-4; //-5
-    rho             [1 -3 0 0 0 0 0] 5;
+    nu              [0  2 -1 0 0 0 0] 1e-4; //-5
+    rho             [1 -3  0 0 0 0 0] 5;
 }
 
-sigma               [1 0 -2 0 0 0 0] 0.94;
-elcond_ref          [0 0 0 0 0 0 0] 3850000.0;
+sigma               [ 1  0 -2 0 0 0 0] 0.94;
+elcond_melt         [-1 -3  3 0 0 2 0] 3850000.0;
+
+// Maximum allowable relative field difference in any cell comparing
+// to last Elmer update. This option controls frequency Elmer is called.
+//     1     - once
+//     (0,1) - when relative difference in any cell exceeds given value
+//     0     - every iteration
+maxRelDiff          0.5;
 
 // ************************************************************************* //

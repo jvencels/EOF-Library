@@ -13,6 +13,7 @@ endif
 
 EXE_INC  = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/dynamicFvMesh/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
     $(PFLAGS) $(PINC) -std=gnu++0x \
     -DFOAM_MAJOR_VERSION=$(FOAM_MAJOR_VERSION) \
@@ -22,5 +23,6 @@ EXE_INC  = \
 LIB_LIBS = \
     -lfiniteVolume \
     -lmeshTools \
+    -ldynamicFvMesh \
     -lfvOptions \
     $(EOF_LIBS)

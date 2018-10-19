@@ -1,41 +1,76 @@
-# EOF-Library // https://EOF-Library.com // [![Build Status](https://travis-ci.org/jvencels/EOF-Library.svg?branch=master)](https://travis-ci.org/jvencels/EOF-Library)
-Libraries for coupling Elmer FEM and OpenFOAM + test cases. Currently used for solving coupled problems, e.g., electromagnetic induction heating and MHD with free surface, but users can use this library for coupling any Elmer and OpenFOAM solvers.
+# [EOF-Library](https://EOF-Library.com) // [![Build Status](https://travis-ci.org/jvencels/EOF-Library.svg?branch=master)](https://travis-ci.org/jvencels/EOF-Library)
+Libraries for coupling [Elmer FEM](https://www.csc.fi/web/elmer) and [OpenFOAM](https://openfoam.org/) + test cases. For detailed information how this software works check our [article preprint](http://dx.doi.org/10.13140/RG.2.2.12907.39203).
 
-This software is maintained by the *Laboratory for mathematical modelling of environmental and technological processes* (University of Latvia) in cooperation with *CSC - IT Center for Science Ltd.* (Finland).
+## About ##
+This software is maintained by [Juris Vencels](https://lv.linkedin.com/in/vencels) from *University of Latvia* in cooperation with *CSC - IT Center for Science Ltd.* (Finland).
+
+* Software improvements and suggestions are very welcome. 
+* If you find this software useful then drop me a message, we could promote each other work.
+* The best way to support development of this library is buying consulting services.
+* GPL v3 license allows commercial use of this software. 
+
+## Introduction ##
+We use EOF-Library for solving magnetohydrodynamic (MHD) problems, e.g., electromagnetic induction melting, stirring, levitation and other cases where metals interact with electromagnetic fields. 
+
+Other users have found it useful for plasma physics, convective cooling of electrical devices and other applications. EOF-Library allows coupling internal fields between almost any Elmer and OpenFOAM solvers.
 
 ## Requirements ##
 * **Both Elmer and OpenFOAM must use the same OpenMPI version!**
-* Tested on Ubuntu 14.04 and Ubuntu 16.04, but in theory it should work on all Linux distros.
-* Provided test cases should work with **OpenFOAM** version **5.0** and  **6**, but might need some small modifications for other versions.
 
 ## How to ##
 There are two options to install and use this software:
-1. Docker
-2. Complete install
+1. __Docker__ install (best for *beginners* and running on *clouds*) - **Linux, Windows, MacOS**
+2. __Complete__ install (best for *developers* and *advanced* users) - **Linux**
 
-Performance-wise these two options are comparable, do not worry about it at this point. Docker installation takes existing OpenFOAM image from Docker Hub, then installs Elmer and EOF-Library. Since the user does not need to compile OpenFOAM, Docker installation process is quicker and more robust therefore it is preferred for users who want to get taste of EOF-Library. On the other hand complete installation gives users more flexibility and this is preferred option for advanced users who want to work with their own solvers or have full control over software versions.
+Performance-wise these two options are comparable. Docker installation comes with OpenFOAM and Elmer installed, and environment is set. This is preferred option for most users and for running simulations on multiple computers or cloud.
+
+On the other hand complete installation gives users more flexibility, it is preferred option for developers who want to work on their own solvers or have full control over software and its source code.
 
 #### 1. Docker ####
+First, you will need to install docker on your OS:
+1. **Ubuntu/Linux** (preferred) - https://docs.docker.com/install/linux/docker-ce/ubuntu/
+2. **Windows** - https://docs.docker.com/docker-for-windows/install/
+https://docs.docker.com/docker-for-windows/install/
+3. **MacOS** - https://docs.docker.com/docker-for-mac/install/
+
+
+Then, follow commands below to install the software & run demo simulation.
+* Create an empty folder
 ```
-git clone https://github.com/jvencels/EOF-Library.git
-cd EOF-Library
-docker build --no-cache -t eof-library/full -f docker/Dockerfile-build .
-docker run --rm -it -u $(id -u):$(id -g) -v ${PWD}:/home/openfoam/EOF-Library eof-library/full
-cd EOF-Library
 mkdir runs
+cd runs
+```
+* Run Docker image and bind mount current host system folder *${PWD}* to newly created *EOF-Library/runs* folder
+```
+docker run -it -v ${PWD}:/home/openfoam/EOF-Library/runs eof-library/eof_of6:latest
+```
+* Update EOF-Library and compile it
+```
+eofUpdate
+```
+* Compile OpenFOAM solver
+```
+cd EOF-Library
+wmake solvers/mhdInterFoam6
+```
+* Copy test simulation
+``` 
 cp -r tests/levitation2D runs
-cd libs
-elmerf90 -o OpenFOAM2Elmer.so OpenFOAM2Elmer.F90
-elmerf90 -o Elmer2OpenFOAM.so Elmer2OpenFOAM.F90
-export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH
-cd ../runs/levitation2D
+```
+* Prepare case
+```
+cd runs/levitation2D
 setFields
 decomposePar
-export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
 ElmerGrid 2 2 meshElmer -metis 2
-mpirun --allow-run-as-root -n 2 mhdInterFoam -parallel : -n 2 ElmerSolver_mpi case.sif
-
 ```
+* Run simulaiton on 2 physical cores
+```
+mpirun --allow-run-as-root -n 2 mhdInterFoam -parallel : -n 2 ElmerSolver_mpi case.sif
+```
+* Simulation results will appear in host system *runs* folder
+
+
 #### 2. Complete installation ####
 * Get `git`, `cmake`, `gfortran`, `blas` and `lapack`.
 ```
@@ -64,13 +99,19 @@ export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
 which mpirun
 mpirun --version
 ```
-* Compile libraries and solver
+* Compile libraries
 
 ```
 cd EOF-Library/libs
 elmerf90 -o Elmer2OpenFOAM.so Elmer2OpenFOAM.F90
 elmerf90 -o OpenFOAM2Elmer.so OpenFOAM2Elmer.F90
+```
+* Add this line to `.bashrc`
+```
 export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH
+```
+* Colmpile OpenFOAM solver
+```
 cd coupleElmer
 wmake
 cd ../../solvers/mhdInterFoam
@@ -99,11 +140,4 @@ ElmerGrid 2 2 meshElmer -metis 2
 
 ```
 mpirun -np 2 mhdInterFoam -parallel : -np 2 ElmerSolver_mpi
-```
-
-* Postprocessing
-
-```
-reconstructPar
-paraFoam
 ```

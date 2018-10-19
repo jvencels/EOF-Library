@@ -89,13 +89,13 @@ int main(int argc, char *argv[])
     Info<< "\nStarting time loop\n" << endl;
 
     // Send fields to Elmer
-    Elmer sending(mesh,1); // 1=send, -1=receive
+    Elmer<fvMesh> sending(mesh,1); // 1=send, -1=receive
     sending.sendStatus(1); // 1=ok, 0=lastIter, -1=error
-    elcond = alpha1 * elcond_ref;
+    elcond = alpha1 * elcond_melt;
     sending.sendScalar(elcond);
 
     // Receive fields from Elmer
-    Elmer receiving(mesh,-1); // 1=send, -1=receive
+    Elmer<fvMesh> receiving(mesh,-1); // 1=send, -1=receive
     receiving.sendStatus(1); // 1=ok, 0=lastIter, -1=error
     receiving.recvVector(JxB_recv);
     receiving.recvScalar(JH_recv);
@@ -157,10 +157,10 @@ int main(int argc, char *argv[])
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
         // Check whether we need to update electromagnetic stuff with Elmer
-        double maxRelDiff = (max(mag(alpha_old - alpha1f))).value();
+        scalar maxRelDiff_local = (max(mag(alpha_old - alpha1f))).value();
 
         bool doElmer = false;
-        if(maxRelDiff>0.5) {
+        if(maxRelDiff_local>maxRelDiff && (maxRelDiff<SMALL || maxRelDiff+SMALL<=1.0)) {
             doElmer = true;
         }
 
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 
             // Send fields to Elmer
             sending.sendStatus(runTime.run());
-            elcond = alpha1f * elcond_ref;
+            elcond = alpha1f * elcond_melt;
             sending.sendScalar(elcond);
 
             // Receive fields form Elmer

@@ -9,7 +9,7 @@ $frequency = 5000.0
 $current = 4e7
 
 Simulation
-  Max Output Level = 2
+  Max Output Level = 3
   Coordinate System = Axi Symmetric
   Angular Frequency = $2*pi*frequency
 
@@ -19,7 +19,7 @@ Simulation
 
   Solver Input File = case.sif
   Post File = case.vtu
-  Output Intervals = 3
+  Output Intervals = 2
 End
 
 Constants

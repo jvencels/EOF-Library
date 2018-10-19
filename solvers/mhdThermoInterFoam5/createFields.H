@@ -68,7 +68,50 @@ volScalarField elcond
         IOobject::NO_WRITE
     ),
     mesh,
-	dimensionedScalar("zero", dimless, 0)
+	dimensionedScalar("zero", dimensionSet(-1, -3, 3, 0, 0, 2, 0), 0)
+);
+
+Info<< "Initializing field T\n" << endl;
+volScalarField T
+(
+    IOobject
+    (
+        "T",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+
+Info<< "Initializing field JH\n" << endl;
+volScalarField JH
+(
+    IOobject
+    (
+        "JH",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+Info<< "Initializing field JH_recv\n" << endl;
+volScalarField JH_recv
+(
+    IOobject
+    (
+        "JH_recv",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    JH
 );
 
 Info<< "Initializing field alpha_old\n" << endl;
@@ -98,6 +141,26 @@ volScalarField& alpha2(mixture.alpha2());
 const dimensionedScalar& rho1 = mixture.rho1();
 const dimensionedScalar& rho2 = mixture.rho2();
 
+volScalarField alpha1f
+(
+    IOobject
+    (
+        "alpha1f",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    alpha1
+);
+
+// Heat capacity
+dimensionedScalar cp1("cp", dimSpecificHeatCapacity, mixture.nuModel1().viscosityProperties());
+dimensionedScalar cp2("cp", dimSpecificHeatCapacity, mixture.nuModel2().viscosityProperties());
+
+// Thermal conductivity number
+dimensionedScalar kappa1("kappa", dimPower/dimLength/dimTemperature, mixture.nuModel1().viscosityProperties());
+dimensionedScalar kappa2("kappa", dimPower/dimLength/dimTemperature, mixture.nuModel2().viscosityProperties());
 
 // Need to store rho for ddt(rho, U)
 volScalarField rho
@@ -113,7 +176,6 @@ volScalarField rho
 );
 rho.oldTime();
 
-
 // Mass flux
 surfaceScalarField rhoPhi
 (
@@ -127,7 +189,6 @@ surfaceScalarField rhoPhi
     ),
     fvc::interpolate(rho)*phi
 );
-
 
 // Construct incompressible turbulence model
 autoPtr<incompressible::turbulenceModel> turbulence
@@ -199,4 +260,12 @@ tmp<surfaceScalarField> talphaPhiCorr0;
 #include "createMRF.H"
 
 // Reference conductivity
-dimensionedScalar elcond_ref("elcond_ref", dimless, mixture);
+dimensionedScalar elcond_melt("elcond_melt", dimensionSet(-1, -3, 3, 0, 0, 2, 0), mixture);
+
+// Maximum allowable relative field difference in any cell comparing
+// to last Elmer update. This option controls frequency Elmer is called.
+//     1     - once
+//     (0,1) - when relative difference in any cell exceeds given value
+//     0     - every iteration
+
+scalar maxRelDiff(readScalar(mixture.lookup("maxRelDiff")));

@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     );
 
     // Receive fields from Elmer
-    Elmer receiving(mesh,-1); // 1=send, -1=receive
+    Elmer<fvMesh> receiving(mesh,-1); // 1=send, -1=receive
     receiving.sendStatus(0); // 1=ok, 0=lastIter, -1=error
     receiving.recvScalar(T);
 
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     T.write();
 
     // Send fields to Elmer
-    Elmer sending(mesh,1); // 1=send, -1=receive
+    Elmer<fvMesh> sending(mesh,1); // 1=send, -1=receive
     sending.sendStatus(0); // 1=ok, 0=lastIter, -1=error
     sending.sendScalar(T);
     //sending.sendScalar(realT);

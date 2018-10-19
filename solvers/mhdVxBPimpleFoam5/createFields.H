@@ -26,6 +26,20 @@ volVectorField U
     mesh
 );
 
+Info<< "Initializing field U_old\n" << endl;
+volVectorField U_old
+(
+    IOobject
+    (
+        "U_old",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    U
+);
+
 Info<< "Initializing field JxB\n" << endl;
 volVectorField JxB
 (
@@ -62,3 +76,10 @@ autoPtr<incompressible::turbulenceModel> turbulence
 // Melt's density
 dimensionedScalar rho("rho", dimDensity, laminarTransport);
 
+// Maximum allowable relative field difference in any cell comparing
+// to last Elmer update. This option controls frequency Elmer is called.
+//     1     - once
+//     (0,1) - when relative difference in any cell exceeds given value
+//     0     - every iteration
+
+scalar maxRelDiff(readScalar(laminarTransport.lookup("maxRelDiff")));

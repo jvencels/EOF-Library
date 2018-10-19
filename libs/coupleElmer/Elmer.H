@@ -65,6 +65,7 @@ namespace Foam
                           Class Elmer Declaration
 \*---------------------------------------------------------------------------*/
 
+template <class meshT>
 class Elmer
 {
 
@@ -72,11 +73,8 @@ public:
 
     // Public data
 
-        //- Construct and initialize
-        Elmer(const fvMesh& mesh, int mode);
-
         //- Construct and initialize if needed
-        Elmer(const fvMesh& mesh, int mode, bool init);
+        Elmer(const meshT& mesh, int mode, bool init=true);
 
         //- Initialize
         void initialize();
@@ -97,7 +95,7 @@ public:
         void sendStatus(int status);
 
         //- Get bound box for local mesh partition
-        void getboundBox(const fvMesh& mesh);
+        void getboundBox(const meshT& mesh);
 
         //- Compare bounding box of this OF partition with all EL ranks
         void findOverlappingBoxes();
@@ -136,7 +134,7 @@ private:
     // Private data
 
         //- Number of cells for this OpenFOAM MPI rank
-        const fvMesh& mesh_;
+        const meshT& mesh_;
 
         //- Coupling mode: 1=send, -1=receive, 0=both
         const int mode_;
