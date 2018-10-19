@@ -47,12 +47,14 @@ if [ ! -f $dockerFile ]; then
   fi
 fi
 
+cp $dockerFile $dockerFile-tmp
+
 # Local EOF-Library or pull from  github
 validBuildTypes=("local" "pull")
 if containsElement "$buildType" "${validBuildTypes[@]}"; then
   echo "Docker build type: $buildType"
   if [ "$buildType" = "local" ]; then
-    sed 's@RUN git clone https://github.com/jvencels/EOF-Library.git@ADD ./ EOF-Library@g' $dockerFile > $dockerFile-tmp
+    sed -i 's@RUN git clone https://github.com/jvencels/EOF-Library.git@ADD ./ EOF-Library@g' $dockerFile-tmp
   fi
 else
   echo "ERROR: Docker build type '$buildType' not supported. Valid versions are:"
