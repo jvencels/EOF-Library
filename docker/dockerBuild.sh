@@ -15,7 +15,7 @@
 # ./dockerBuild.sh -b pull -f Dockerfile_eof_swak4foam_of6 -t eof_swak4foam:of6
 
 # Run from main directory
-cd "$(dirname "$0")"/..
+cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
 
 # Function for searching string in string array
 containsElement () {

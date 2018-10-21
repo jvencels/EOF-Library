@@ -1,0 +1,10 @@
+#!/bin/bash
+
+## EOF-Library
+export EOF_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
+export EOF_SRC=$EOF_HOME/libs
+export LD_LIBRARY_PATH=$EOF_SRC:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
+alias eofUpdate='git -C $EOF_HOME pull; wmake $EOF_SRC/coupleElmer; \\
+elmerf90 -o $EOF_SRC/Elmer2OpenFOAM.so -J$EOF_SRC $EOF_SRC/Elmer2OpenFOAM.F90; \\
+elmerf90 -o $EOF_SRC/OpenFOAM2Elmer.so -J$EOF_SRC $EOF_SRC/OpenFOAM2Elmer.F90'
