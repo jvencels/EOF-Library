@@ -12,7 +12,7 @@
 
 # FOR DEPLOYING:
 # ./dockerBuild.sh -b pull -f Dockerfile_eof_of6 -t eof_of6:latest
-# ./dockerBuild.sh -b pull -f Dockerfile_eof_swak4foam_of6 -t eof_swak4foam:of6
+# ./dockerBuild.sh -b pull -f Dockerfile_eof_swak4foam_of6 -t eof_of6_swak4foam:latest
 
 # Run from main directory
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
@@ -70,5 +70,5 @@ then
 fi
 
 echo "Building $dockerFile-tmp"
-docker build --no-cache -t eof-library/$nameTag -f $dockerFile-tmp .
+docker build --no-cache -t eoflibrary/$nameTag -f $dockerFile-tmp .
 rm $dockerFile-tmp
