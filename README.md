@@ -42,7 +42,7 @@ cd runs
 ```
 * Run Docker image and bind mount current host system folder *${PWD}* to newly created *EOF-Library/runs* folder
 ```
-docker run -it -v ${PWD}:/home/openfoam/EOF-Library/runs eof-library/eof_of6:latest
+docker run -it -v ${PWD}:/home/openfoam/EOF-Library/runs eoflibrary/eof_of6:latest
 ```
 * Update EOF-Library and compile it
 ```

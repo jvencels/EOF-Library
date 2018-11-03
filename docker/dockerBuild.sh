@@ -11,8 +11,8 @@
 # ./dockerBuild.sh -b local -f Dockerfile_eof_of6_debug -t eof_of6:debug
 
 # FOR DEPLOYING:
-# ./dockerBuild.sh -b pull -f Dockerfile_eof_of6 -t eof_of6:latest
-# ./dockerBuild.sh -b pull -f Dockerfile_eof_swak4foam_of6 -t eof_of6_swak4foam:latest
+# ./dockerBuild.sh -b pull -f Dockerfile_eof_of6 -t eof_of6
+# ./dockerBuild.sh -b pull -f Dockerfile_eof_of6_swak4foam -t eof_of6_swak4foam
 
 # Run from main directory
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
