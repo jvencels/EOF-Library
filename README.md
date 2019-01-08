@@ -1,4 +1,4 @@
-# [EOF-Library](https://EOF-Library.com) // [![Build Status](https://travis-ci.org/jvencels/EOF-Library.svg?branch=master)](https://travis-ci.org/jvencels/EOF-Library)
+# [EOF-Library](https://EOF-Library.com)
 Libraries for coupling [Elmer FEM](https://www.csc.fi/web/elmer) and [OpenFOAM](https://openfoam.org/) + test cases. For detailed information how this software works check our [article preprint](http://dx.doi.org/10.13140/RG.2.2.12907.39203).
 
 ## About ##
@@ -42,7 +42,7 @@ cd runs
 ```
 * Run Docker image and bind mount current host system folder *${PWD}* to newly created *EOF-Library/runs* folder
 ```
-docker run -it -v ${PWD}:/home/openfoam/EOF-Library/runs eoflibrary/eof_of6:latest
+docker run --rm -it -e HOST_USER_ID=$(id -u) -e HOST_USER_GID=$(id -g) -v ${PWD}:/home/openfoam/EOF-Library/runs eoflibrary/eof_elmer84_of6:latest
 ```
 * Update EOF-Library and compile it
 ```
@@ -64,14 +64,14 @@ setFields
 decomposePar
 ElmerGrid 2 2 meshElmer -metis 2
 ```
-* Run simulaiton on 2 physical cores
+* Run simulation on 2 physical cores:
 ```
-mpirun --allow-run-as-root -n 2 mhdInterFoam -parallel : -n 2 ElmerSolver_mpi case.sif
+mpirun -n 2 mhdInterFoam -parallel : -n 2 ElmerSolver_mpi case.sif
 ```
 * Simulation results will appear in host system *runs* folder
 
 
-#### 2. Complete installation ####
+#### 2. Manual installation ####
 * Get `git`, `cmake`, `gfortran`, `blas` and `lapack`.
 ```
 sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
@@ -90,31 +90,23 @@ make -j install
 ```
 git clone https://github.com/jvencels/EOF-Library
 ```
-* Add this line to `.bashrc`
+* Update environment
 ```
-export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
+. EOF-Library/etc/bashrc
 ```
 * Check the MPI implementation and version (it is **important** that Elmer and OpenFOAM was compiled with the same version!)
 ```
 which mpirun
 mpirun --version
 ```
-* Compile libraries
+* Compile EOF-Library
 
 ```
-cd EOF-Library/libs
-elmerf90 -o Elmer2OpenFOAM.so Elmer2OpenFOAM.F90
-elmerf90 -o OpenFOAM2Elmer.so OpenFOAM2Elmer.F90
-```
-* Add this line to `.bashrc`
-```
-export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH
+eofCompile
 ```
 * Colmpile OpenFOAM solver
 ```
-cd coupleElmer
-wmake
-cd ../../solvers/mhdInterFoam
+cd EOF-Library/solvers/mhdInterFoam
 wmake
 ```
 

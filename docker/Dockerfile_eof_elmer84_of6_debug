@@ -1,0 +1,54 @@
+FROM openfoam/openfoam6-paraview54:latest
+
+ENV USER=openfoam USER_ID=98765 USER_GID=98765
+
+USER root
+
+RUN apt-get -y update && \
+    apt-get install -y \
+        gcc \
+        cmake \
+        g++ \
+        gfortran \
+        libopenblas-dev \
+        git \
+        valgrind \
+        sudo && \
+    echo "openfoam:openfoam" | chpasswd && \
+    adduser openfoam sudo
+
+# Debuggers do not like OpenMPI from Ubuntu repo, compile from scratch
+RUN cd /opt && \
+    wget https://download.open-mpi.org/release/open-mpi/v1.10/openmpi-1.10.2.tar.gz && \
+    tar xvzf openmpi-1.10.2.tar.gz && \
+    rm openmpi-1.10.2.tar.gz && \
+    cd openmpi-1.10.2 && \
+    ./configure --prefix=$(pwd)/install && \
+    make -j install && \
+    echo "export MPI_INST=/opt/openmpi-1.10.2/install" >> /etc/bash.bashrc && \
+    echo "export PATH=\$MPI_INST/bin:\$MPI_INST/include:\$PATH" >> /etc/bash.bashrc && \
+    echo "export LD_LIBRARY_PATH=\$MPI_INST/lib:\$LD_LIBRARY_PATH" >> /etc/bash.bashrc
+
+#  Get & Compile Elmer
+RUN cd /opt && \
+    git clone https://github.com/ElmerCSC/elmerfem.git && \
+    chown -R openfoam:openfoam elmerfem && \
+    cd elmerfem && \
+    git checkout release && \
+    git log --pretty=oneline | tail -n 10 | tee build.log && \
+    mkdir build && \
+    cd build && \
+    cmake -DWITH_MPI=TRUE -DCMAKE_BUILD_TYPE=Debug -DCMAKE_Fortran_FLAGS_DEBUG="-cpp -g -O0 -fbacktrace -fcheck=all -Wall -Wtabs -Wuninitialized -Wextra -Wconversion -ffpe-trap=overflow -ffree-line-length-none" ../ | tee build.log && \
+    make -j install | tee build.log
+
+# Add EOF-Library
+ADD ./ EOF-Library
+
+# Update environment & install script for dynamic UID:GID mapping
+RUN echo ". /home/openfoam/EOF-Library/etc/bashrc" >> .bashrc && \
+    mv /home/openfoam/EOF-Library/docker/user-mapping.sh / && \
+    chmod u+x /user-mapping.sh && \
+    echo "export WM_COMPILE_OPTION=Debug" >> /etc/bash.bashrc && \
+    echo "export PATH=/home/openfoam/debugger/bin:\$PATH" >> .bashrc
+
+ENTRYPOINT ["/user-mapping.sh"]
