@@ -6,6 +6,7 @@ nFails=0
 wmake $EOF_HOME/solvers/mhdInterFoam6
 
 ElmerGrid 2 2 meshElmer -metis 2
+setFields
 decomposePar
 
 for case in *.sif; do

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dockerImageName="vencels/travisdockerhub"
+dockerImageName="eoflibrary/eof_elmer84_of6"
 
 echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
