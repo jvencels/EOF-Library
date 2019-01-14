@@ -19,7 +19,7 @@ for testDir in */ ; do
     nTestsPass=$((nTestsPass+1))
   else
     echo "  Fail! $status"
-    cat tmp.log >> travisTests.log
+    tail -500 tmp.log >> travisTests.log
     nTestsFail=$((nTestsFail+status))
   fi
 done
