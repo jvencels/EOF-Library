@@ -1,6 +1,14 @@
 services: docker
-before_install:
-- docker build --no-cache -t eof-library/full -f docker/Dockerfile-build .
+
+install:
+  - docker --version
+  - docker build --no-cache --pull -t test_image -f docker/Dockerfile_eof .
+
 script:
-- docker build --no-cache -t eof-library/test -f docker/Dockerfile-test .
-- docker run eof-library/test
+  - docker run --rm -it -e HOST_USER_ID=$(id -u) -e HOST_USER_GID=$(id -g) test_image ./EOF-Library/tests/travisTests.sh
+
+deploy:
+  provider: script
+  script: bash docker/travisDockerPush.sh
+  on:
+    all_branches: true

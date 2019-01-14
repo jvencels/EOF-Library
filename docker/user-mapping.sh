@@ -8,7 +8,7 @@
 # if both not set we do not need to do anything
 if [ -z "${HOST_USER_ID}" -o -z "${HOST_USER_GID}" -o -z "${USER}" ]; then
     echo "Flags '-e HOST_USER_ID=\$(id -u) -e HOST_USER_GID=\$(id -g)' were not set. You might have permission problems."
-    /bin/bash
+    /bin/bash "$@"
 else
   # reset user_?id to either new id or if empty old (still one of above
   # might not be set)
@@ -27,5 +27,5 @@ else
 
   chown -R ${USER_ID}:${USER_GID} ${USER_HOME}
 
-  exec su - "${USER}"
+  exec su - "${USER}" "$@"
 fi
