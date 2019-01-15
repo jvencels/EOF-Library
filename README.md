@@ -1,5 +1,10 @@
 # [EOF-Library](https://EOF-Library.com)
-Libraries for coupling [Elmer FEM](https://www.csc.fi/web/elmer) and [OpenFOAM](https://openfoam.org/) + test cases. For detailed information how this software works check our [article preprint](http://dx.doi.org/10.13140/RG.2.2.12907.39203).
+Libraries for coupling [Elmer FEM](https://www.csc.fi/web/elmer) and [OpenFOAM](https://openfoam.org/) + test cases. For detailed information how this software works check our [article](https://doi.org/10.1016/j.softx.2019.01.007):
+
+Juris Vencels, Peter Råback, Vadims Geža,
+__EOF-Library: Open-source Elmer FEM and OpenFOAM coupler for electromagnetics and fluid dynamics__,
+SoftwareX, Volume 9, 2019, Pages 68-72, ISSN 2352-7110,
+https://doi.org/10.1016/j.softx.2019.01.007.
 
 ## About ##
 This software is maintained by [Juris Vencels](https://lv.linkedin.com/in/vencels) from *University of Latvia* in cooperation with *CSC - IT Center for Science Ltd.* (Finland).
