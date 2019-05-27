@@ -1,6 +1,4 @@
 /*---------------------------------------------------------------------------*\
-Copyright (C) 2016-2018 University of Latvia
--------------------------------------------------------------------------------
 License
     This file is part of EOF-Library.
 
@@ -26,13 +24,9 @@ Description
 SourceFiles
     Elmer.C
 
-Authors:   Juris Vencels
-Email:     juris.vencels@lu.lv
+Authors:   Juris Vencels (EOF Consulting, Latvia)
+
 Web:       http://eof-library.com
-Address:   University of Latvia
-           Laboratory for mathematical modelling of 
-               environmental and technological processes
-           Zellu Str. 23, Riga, LV-1002, Latvia
 
 Original Date: 12.12.2016.
 

@@ -1,6 +1,4 @@
 ! *****************************************************************************/
-! * Copyright (C) 2016-2018 University of Latvia
-! *****************************************************************************/
 ! * License
 ! *    This file is part of EOF-Library.
 ! *
@@ -19,10 +17,8 @@
 ! *
 ! *****************************************************************************/
 ! *
-! *  Authors: Juris Vencels (University of Latvia)
+! *  Authors: Juris Vencels (EOF Consulting, Latvia)
 ! *           Peter Råback (CSC - IT Center for Science, Finland)
-! *  
-! *  Email:   juris.vencels@lu.lv
 ! *  
 ! *  Web:     https://eof-library.com
 ! *
@@ -62,15 +58,15 @@ MODULE OpenFOAM2ElmerSolverUtils
 
   INTEGER :: totOFRanks, OFRanksStart, ElmerRanksStart, myGlobalRank, &
              totGlobalRanks, myLocalRank, totLocalRanks, nVars, nElements, &
-             totElementsFound
+             totElementsFound, nBodiesToComm
 
 !  INTEGER, ALLOCATABLE :: commElementId(:), elemPerNode(:)
 !  LOGICAL, ALLOCATABLE :: commMaterial(:), commBody(:), commBodyForce(:)
   REAL(KIND=dp), POINTER :: commElementX(:), commElementY(:), commElementZ(:)
-  TYPE(OFproc_t), ALLOCATABLE, TARGET :: OFp(:)
+  TYPE(OFproc_t), ALLOCATABLE, TARGET :: OFp(:,:) ! [OFrank][body]
   REAL(KIND=dp) :: myBoundBox(3,2) ! [x,y,z][min,max]
-  REAL(KIND=dp), POINTER :: ELboundBoxes(:,:,:) ! [x,y,z][min,max][rank]
-  INTEGER, POINTER :: OF_EL_overlap(:,:) ! [ELrank][OFrank]
+  REAL(KIND=dp), POINTER :: ELboundBoxes(:,:,:,:) ! [x,y,z][min,max][rank][body]
+  INTEGER, POINTER :: OF_EL_overlap(:,:,:) ! [ELrank][OFrank][body]
 
 END MODULE OpenFOAM2ElmerSolverUtils
 
@@ -103,26 +99,28 @@ SUBROUTINE MPI_TEST_SLEEP( req, ierr )
 END SUBROUTINE MPI_TEST_SLEEP
 
 !------------------------------------------------------------------------------
-SUBROUTINE findOverlappingBoxes()
+SUBROUTINE findOverlappingBoxes(s)
 
   USE OpenFOAM2ElmerSolverUtils
 
   IMPLICIT NONE
   !------------------------------------------------------------------------------
-  INTEGER :: ierr,  i
+  INTEGER :: ierr,  i, s
   INTEGER :: status(MPI_STATUS_SIZE)
 
-  CALL MPI_ALLGATHER(myBoundBox, 6, MPI_DOUBLE, ELboundBoxes, 6, MPI_DOUBLE, ELMER_COMM_WORLD, ierr)
+  CALL MPI_ALLGATHER(myBoundBox, 6, MPI_DOUBLE, ELboundBoxes(:,:,:,s), 6, MPI_DOUBLE, ELMER_COMM_WORLD, ierr)
 
   IF ( myLocalRank==0 ) THEN
-    CALL MPI_SEND(ELboundBoxes, totLocalRanks*2*3, MPI_DOUBLE, OFp(0) % globalRank, 1001, MPI_COMM_WORLD, ierr)
-    CALL MPI_RECV(OF_EL_overlap, totOFRanks*totLocalRanks, MPI_INTEGER, OFp(0) % globalRank, 1002, MPI_COMM_WORLD, status, ierr)
+    CALL MPI_SEND(ELboundBoxes(:,:,:,s), totLocalRanks*2*3, MPI_DOUBLE, &
+                  OFp(0,s) % globalRank, 1001, MPI_COMM_WORLD, ierr)
+    CALL MPI_RECV(OF_EL_overlap(:,:,s), totOFRanks*totLocalRanks, MPI_INTEGER, &
+                  OFp(0,s) % globalRank, 1002, MPI_COMM_WORLD, status, ierr)
   END IF
 
-  CALL MPI_Bcast(OF_EL_overlap, totOFRanks*totLocalRanks, MPI_INTEGER, 0, ELMER_COMM_WORLD, ierr)
+  CALL MPI_Bcast(OF_EL_overlap(:,:,s), totOFRanks*totLocalRanks, MPI_INTEGER, 0, ELMER_COMM_WORLD, ierr)
 
   DO i=0,totOFRanks-1
-    OFp(i) % boxOverlap = (OF_EL_overlap(myLocalRank,i)==1)
+    OFp(i,s) % boxOverlap = (OF_EL_overlap(myLocalRank,i,s)==1)
   END DO
 
 END SUBROUTINE findOverlappingBoxes
@@ -148,11 +146,12 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
   TYPE(ValueList_t), POINTER :: Params
   TYPE(Variable_t), POINTER :: Var, VarCoord 
   CHARACTER(LEN=MAX_NAME_LEN) :: VarName
-  INTEGER :: i, j, k, l, n, ierr, OFstatus
+  INTEGER :: i, j, k, l, n, ierr, OFstatus, s
   INTEGER :: status(MPI_STATUS_SIZE)
-  LOGICAL :: Found, Flag
+  LOGICAL :: Found
   TYPE(Element_t), POINTER :: Element
   REAL(KIND=dp) :: DgScale, InvDgScale, ElemCenter(3), VarCenter
+  INTEGER, POINTER :: Blist(:)
 
   TYPE(Mesh_t), POINTER :: Mesh
   LOGICAL :: Visited = .FALSE., UserDefinedCoordinates
@@ -217,6 +216,14 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     !------------------------------------------------------------------------
     myLocalRank   = ParEnv % MyPE
     totLocalRanks = ParEnv % PEs
+
+    IF( ListCheckPresent( Params,'Bodies') ) THEN
+      BList => ListGetIntegerArray( Params, 'Bodies', Found ) 
+      nBodiesToComm = SIZE(BList)
+    ELSE
+      nBodiesToComm = 1
+    END IF
+
     CALL MPI_COMM_RANK( MPI_COMM_WORLD, myGlobalRank, ierr )
     CALL MPI_COMM_SIZE( MPI_COMM_WORLD, totGlobalRanks, ierr )
 
@@ -236,12 +243,9 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     END IF
 
     CALL Info('OpenFOAM2ElmerSolver', 'Allocating OpenFOAM data structures',Level=3)
-    ALLOCATE( OFp(0:totOFRanks-1) )
-
-    DO i=0,totOFRanks-1
-      ALLOCATE( OFp(i) % OFMesh )
-      OFp(i) % globalRank = i + OFRanksStart
-    END DO
+    ALLOCATE( OF_EL_overlap(0:totLocalRanks-1,0:totOFRanks-1,nBodiesToComm) )
+    ALLOCATE( ELboundBoxes(3,2,0:totLocalRanks-1,nBodiesToComm) )
+    ALLOCATE( OFp(0:totOFRanks-1,nBodiesToComm) )
 
     ! Get getboundBox
     myBoundBox(1,1) = MINVAL(Mesh % Nodes % x)
@@ -251,11 +255,6 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
     myBoundBox(3,1) = MINVAL(Mesh % Nodes % z)
     myBoundBox(3,2) = MAXVAL(Mesh % Nodes % z)
 
-    ALLOCATE( OF_EL_overlap(0:totLocalRanks-1,0:totOFRanks-1) )
-    ALLOCATE( ELboundBoxes(3,2,0:totLocalRanks-1) )
-
-    CALL findOverlappingBoxes()
-
     ! Here we assume that the variable that we are looking for is always of proper size
     ! specified by the 1st variable to be interpolated.
     nElements = size( Var % Values )
@@ -264,11 +263,11 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
               commElementY(nElements),  &
               commElementZ(nElements) )
 
-    VarName = ListGetString( Params,'Interpolate Coordinate', UserDefinedCoordinates ) 
+    VarName = ListGetString( Params,'Interpolate Coordinate', UserDefinedCoordinates )
     
     IF( UserDefinedCoordinates ) THEN
-      CALL Info('OpenFOAM2ElmerSolver','Using precomputed coordinates for interpolation')      
-      
+      CALL Info('OpenFOAM2ElmerSolver','Using precomputed coordinates for interpolation')
+
       VarCoord => VariableGet( Mesh % Variables, VarName )
       IF( .NOT. ASSOCIATED( VarCoord ) ) THEN
         VarCoord => VariableGet( Mesh % Variables,"ip coordinate" )
@@ -349,142 +348,155 @@ SUBROUTINE OpenFOAM2ElmerSolver( Model,Solver,dt,TransientSimulation )
       END IF
     END IF
 
-
-    ! Starting communication
-    !------------------------------------------------------------------------
-
-    DO i = 0, totOFRanks - 1
-      IF(.NOT.OFp(i) % boxOverlap) CYCLE
-      ! Number of Elmer elements
-      CALL MPI_ISEND(nElements, 1, MPI_INTEGER, &
-          OFp(i) % globalRank, 899, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
-    END DO
-
-    DO i = 0, totOFRanks - 1
-      IF(.NOT.OFp(i) % boxOverlap) CYCLE
-      ! Number of Elmer elements
-      CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
-      ! Element X coords
-      CALL MPI_ISEND(commElementX, nElements, MPI_DOUBLE, &
-          OFp(i) % globalRank, 897, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
-      CALL MPI_REQUEST_FREE(OFp(i) % reqSend, ierr)
-      CALL MPI_ISEND(commElementY, nElements, MPI_DOUBLE, &
-          OFp(i) % globalRank, 897, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
-      CALL MPI_REQUEST_FREE(OFp(i) % reqSend, ierr)
-      CALL MPI_ISEND(commElementZ, nElements, MPI_DOUBLE, &
-          OFp(i) % globalRank, 897, MPI_COMM_WORLD, OFp(i) % reqSend, ierr)
-    END DO
-
-    DO i = 0, totOFRanks - 1
-      OFp(i) % nFoundElements = 0 ! keep this
-      IF(.NOT.OFp(i) % boxOverlap) CYCLE
-      ! Element Z coords
-      CALL MPI_TEST_SLEEP(OFp(i) % reqSend, ierr)
-      ! Number of found elements
-      CALL MPI_IRECV(OFp(i) % nFoundElements, 1, MPI_INTEGER, &
-          OFp(i) % globalRank, 895, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
-    END DO
+    CALL Info('OpenFOAM2ElmerSolver','Total number of bodiesto communicate: '//TRIM(I2S(nBodiesToComm)), Level=3 )
 
     totElementsFound = 0
-    DO i = 0, totOFRanks - 1
-      IF(.NOT.OFp(i) % boxOverlap) CYCLE
-      ! Number of found elements
-      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
 
-      IF (OFp(i) % nFoundElements == 0) CYCLE
-      totElementsFound = totElementsFound + OFp(i) % nFoundElements
+    DO s=1,nBodiesToComm
+      DO i=0,totOFRanks-1
+        ALLOCATE( OFp(i,s) % OFMesh )
+        OFp(i,s) % globalRank = i + OFRanksStart
+      END DO
+      CALL findOverlappingBoxes(s)
 
-      ALLOCATE ( OFp(i) % foundElementIndx(OFp(i) % nFoundElements), &
-                 OFp(i) % recvValues(OFp(i) % nFoundElements))
+      ! Starting communication
+      !------------------------------------------------------------------------
+      CALL Info('OpenFOAM2ElmerSolver','Starting communication for Body #'//TRIM(I2S(s)), Level=3 )
 
-      ! Indexes of found elements
-      CALL MPI_IRECV(OFp(i) % foundElementIndx, OFp(i) % nFoundElements, MPI_INTEGER, &
-          OFp(i) % globalRank, 894, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
-    END DO
+      DO i = 0, totOFRanks - 1
+        IF(.NOT.OFp(i,s) % boxOverlap) CYCLE
+        ! Number of Elmer elements
+        CALL MPI_ISEND(nElements, 1, MPI_INTEGER, &
+            OFp(i,s) % globalRank, 899, MPI_COMM_WORLD, OFp(i,s) % reqSend, ierr)
+      END DO
+
+      CALL Info('OpenFOAM2ElmerSolver','Sending coordinates', Level=3 )
+      DO i = 0, totOFRanks - 1
+        IF(.NOT.OFp(i,s) % boxOverlap) CYCLE
+        ! Number of Elmer elements
+        CALL MPI_TEST_SLEEP(OFp(i,s) % reqSend, ierr)
+        ! Element X coords
+        CALL MPI_ISEND(commElementX, nElements, MPI_DOUBLE, &
+            OFp(i,s) % globalRank, 897, MPI_COMM_WORLD, OFp(i,s) % reqSend, ierr)
+        CALL MPI_REQUEST_FREE(OFp(i,s) % reqSend, ierr)
+        CALL MPI_ISEND(commElementY, nElements, MPI_DOUBLE, &
+            OFp(i,s) % globalRank, 897, MPI_COMM_WORLD, OFp(i,s) % reqSend, ierr)
+        CALL MPI_REQUEST_FREE(OFp(i,s) % reqSend, ierr)
+        CALL MPI_ISEND(commElementZ, nElements, MPI_DOUBLE, &
+            OFp(i,s) % globalRank, 897, MPI_COMM_WORLD, OFp(i,s) % reqSend, ierr)
+      END DO
+
+      DO i = 0, totOFRanks - 1
+        OFp(i,s) % nFoundElements = 0 ! keep this
+        IF(.NOT.OFp(i,s) % boxOverlap) CYCLE
+        ! Element Z coords
+        CALL MPI_TEST_SLEEP(OFp(i,s) % reqSend, ierr)
+        ! Number of found elements
+        CALL MPI_IRECV(OFp(i,s) % nFoundElements, 1, MPI_INTEGER, &
+            OFp(i,s) % globalRank, 895, MPI_COMM_WORLD, OFp(i,s) % reqRecv, ierr)
+      END DO
+
+      DO i = 0, totOFRanks - 1
+        IF(.NOT.OFp(i,s) % boxOverlap) CYCLE
+        ! Number of found elements
+        CALL MPI_TEST_SLEEP(OFp(i,s) % reqRecv, ierr)
+
+        IF (OFp(i,s) % nFoundElements == 0) CYCLE
+        totElementsFound = totElementsFound + OFp(i,s) % nFoundElements
+
+        ALLOCATE ( OFp(i,s) % foundElementIndx(OFp(i,s) % nFoundElements), &
+                   OFp(i,s) % recvValues(OFp(i,s) % nFoundElements))
+
+        ! Indexes of found elements
+        CALL MPI_IRECV(OFp(i,s) % foundElementIndx, OFp(i,s) % nFoundElements, MPI_INTEGER, &
+            OFp(i,s) % globalRank, 894, MPI_COMM_WORLD, OFp(i,s) % reqRecv, ierr)
+      END DO
+
+      DO i = 0, totOFRanks - 1
+        IF (OFp(i,s) % nFoundElements == 0) CYCLE
+        ! Indexes of found elements
+        CALL MPI_TEST_SLEEP(OFp(i,s) % reqRecv, ierr)
+        OFp(i,s) % foundElementIndx = OFp(i,s) % foundElementIndx + 1
+      END DO
+
+    END DO ! nBodiesToComm
 
     IF (totElementsFound < nElements) THEN
       CALL Fatal('OpenFOAM2ElmerSolver','Elmer #'//TRIM(I2S(myLocalRank))//' has ' &
                  //TRIM(I2S(nElements))//' elements, OpenFOAM found '//TRIM(I2S(totElementsFound)))
     END IF
 
-    DO i = 0, totOFRanks - 1
-      IF (OFp(i) % nFoundElements == 0) CYCLE
-      ! Indexes of found elements
-      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
-      OFp(i) % foundElementIndx = OFp(i) % foundElementIndx + 1
-    END DO
-
   END IF ! Visited
 
-  ! Receive simulation status
-  CALL MPI_IRECV( OFstatus, 1, MPI_INTEGER, OFp(0) % globalRank, 799, MPI_COMM_WORLD, OFp(0) % reqRecv, ierr)
-  CALL MPI_TEST_SLEEP(OFp(0) % reqRecv, ierr)
+  DO s=1,nBodiesToComm
+    ! Receive simulation status
+    CALL MPI_IRECV( OFstatus, 1, MPI_INTEGER, OFp(0,s) % globalRank, 799, MPI_COMM_WORLD, OFp(0,s) % reqRecv, ierr)
+    CALL MPI_TEST_SLEEP(OFp(0,s) % reqRecv, ierr)
 
-  IF (OFstatus.NE.1) THEN
-    CALL Info('OpenFOAM2ElmerSolver','Elmer has last iteration!', Level=3 )
-    exitcond = ListGetCReal( CurrentModel % Simulation,'Exit Condition',Found)
-    IF(.NOT.Found) CALL ListAddConstReal(CurrentModel % Simulation,'Exit Condition',1.0_dp)
-  END IF
+    IF (OFstatus.NE.1) THEN
+      CALL Info('OpenFOAM2ElmerSolver','Elmer has last iteration!', Level=3 )
+      exitcond = ListGetCReal( CurrentModel % Simulation,'Exit Condition',Found)
+      IF(.NOT.Found) CALL ListAddConstReal(CurrentModel % Simulation,'Exit Condition',1.0_dp)
+    END IF
 
-  ! Receive fields
-  DO j=1,nVars
-    Var => OFVarTable(j) % Variable 
-    CALL Info('OpenFOAM2ElmerSolver','Receiving: '//TRIM(Var % name),Level=5)
-    
-    Var % Values = 0
+    ! Receive fields
+    DO j=1,nVars
+      Var => OFVarTable(j) % Variable 
+      CALL Info('OpenFOAM2ElmerSolver','Receiving: '//TRIM(Var % name),Level=5)
 
-    DO i = 0, totOFRanks - 1
-      IF (OFp(i) % nFoundElements == 0) CYCLE
-      CALL MPI_IRECV( OFp(i) % recvValues, OFp(i) % nFoundElements, MPI_DOUBLE, &
-                      OFp(i) % globalRank, 900, MPI_COMM_WORLD, OFp(i) % reqRecv, ierr)
-    END DO
+      DO i = 0, totOFRanks - 1
+        IF (OFp(i,s) % nFoundElements == 0) CYCLE
+        CALL MPI_IRECV( OFp(i,s) % recvValues, OFp(i,s) % nFoundElements, MPI_DOUBLE, &
+                        OFp(i,s) % globalRank, 900, MPI_COMM_WORLD, OFp(i,s) % reqRecv, ierr)
+      END DO
 
-    DO i = 0, totOFRanks - 1
-      IF (OFp(i) % nFoundElements == 0) CYCLE
-      CALL MPI_TEST_SLEEP(OFp(i) % reqRecv, ierr)
+      DO i = 0, totOFRanks - 1
+        IF (OFp(i,s) % nFoundElements == 0) CYCLE
+        CALL MPI_TEST_SLEEP(OFp(i,s) % reqRecv, ierr)
 
 #ifndef SKIP_FP_FIX
-      ! Fix floating point exception
-      WHERE (OFp(i) % recvValues<EPSILON(1.e0) &
-                       .AND. OFp(i) % recvValues > -EPSILON(1.e0))
-        OFp(i) % recvValues = 0
-      END WHERE
+        ! Fix floating point exception
+        WHERE (OFp(i,s) % recvValues<EPSILON(1.e0) &
+                         .AND. OFp(i,s) % recvValues > -EPSILON(1.e0))
+          OFp(i,s) % recvValues = 0
+        END WHERE
 #else
 #warning "Dirty fix for floating point exception is disabled!"
 #endif
 
-      ! Directly interpolate to the points needed, don't reinterpolate
-      DO k = 1, OFp(i) % nFoundElements
-        l = OFp(i) % foundElementIndx(k)
-        Var % Values(l) = Ofp(i) % recvValues(k)
-      END DO
-    END DO
-
-    ! We used shrinked version of DG element. Now extrapolate the interpolated values
-    ! to the nodes.
-    IF( Var % TYPE == Variable_on_nodes_on_elements ) THEN
-
-      DO i = 1, Mesh % NumberOfBulkElements
-        Element => Mesh % Elements(i)
-        n = Element % TYPE % NumberOfNodes
-        IF( ANY( Var % Perm( Element % DGIndexes ) == 0 ) ) CYCLE
-
-        ! Compute element center
-        VarCenter = SUM( Var % Values(Var % Perm(Element % DGIndexes ) ) ) / n
-
-        Var % Values(Var % Perm(Element % DGIndexes ) ) = &
-            VarCenter + InvDgScale * ( Var % Values(Var % Perm(Element % DGIndexes ) ) - VarCenter )
+        ! Directly interpolate to the points needed, don't reinterpolate
+        DO k = 1, OFp(i,s) % nFoundElements
+          l = OFp(i,s) % foundElementIndx(k)
+          Var % Values(l) = OFp(i,s) % recvValues(k)
+        END DO
       END DO
 
-    END IF
+      ! We used shrinked version of DG element. Now extrapolate the interpolated values
+      ! to the nodes.
+      IF( Var % TYPE == Variable_on_nodes_on_elements ) THEN
 
-  END DO
+        DO i = 1, Mesh % NumberOfBulkElements
+          Element => Mesh % Elements(i)
+          n = Element % TYPE % NumberOfNodes
+          IF( ANY( Var % Perm( Element % DGIndexes ) == 0 ) ) CYCLE
+
+          ! Compute element center
+          VarCenter = SUM( Var % Values(Var % Perm(Element % DGIndexes ) ) ) / n
+
+          Var % Values(Var % Perm(Element % DGIndexes ) ) = &
+              VarCenter + InvDgScale * ( Var % Values(Var % Perm(Element % DGIndexes ) ) - VarCenter )
+        END DO
+
+      END IF ! Variable_on_nodes_on_elements
+
+    END DO ! nVars
+  END DO ! nBodiesToComm
 
   VISITED = .TRUE.
 
   CALL Info('OpenFOAM2ElmerSolver','All done', Level=4 )
   CALL Info('OpenFOAM2ElmerSolver','-----------------------------------------', Level=4 )
   
-!------------------------------------------------------------------------------  
+!------------------------------------------------------------------------------
 
 END SUBROUTINE OpenFOAM2ElmerSolver
