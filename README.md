@@ -1,23 +1,26 @@
 # [EOF-Library](https://EOF-Library.com)
-Libraries for coupling [Elmer FEM](https://www.csc.fi/web/elmer) and [OpenFOAM](https://openfoam.org/) + test cases. For detailed information how this software works check our [article](https://doi.org/10.1016/j.softx.2019.01.007):
+Libraries for coupling [Elmer FEM](https://www.csc.fi/web/elmer) and [OpenFOAM](https://openfoam.org/) + test cases. For detailed information how this software works check our [article](https://doi.org/10.1016/j.softx.2019.01.007).
 
+___If you use EOF-Library, please cite:___
 Juris Vencels, Peter Råback, Vadims Geža,
-__EOF-Library: Open-source Elmer FEM and OpenFOAM coupler for electromagnetics and fluid dynamics__,
+_EOF-Library: Open-source Elmer FEM and OpenFOAM coupler for electromagnetics and fluid dynamics_,
 SoftwareX, Volume 9, 2019, Pages 68-72, ISSN 2352-7110,
 https://doi.org/10.1016/j.softx.2019.01.007.
 
 ## About ##
-This software is maintained by [Juris Vencels](https://lv.linkedin.com/in/vencels) from *University of Latvia* in cooperation with *CSC - IT Center for Science Ltd.* (Finland).
+This software is maintained by [Juris Vencels](https://lv.linkedin.com/in/vencels) from *EOF Consulting LLC* in cooperation with *CSC - IT Center for Science Ltd.* (Finland).
 
 * Software improvements and suggestions are very welcome. 
-* If you find this software useful then drop me a message, we could promote each other work.
+* If you find this software useful then drop me a message.
 * The best way to support development of this library is buying consulting services.
-* GPL v3 license allows commercial use of this software. 
+* GPL v3 license allows commercial use of this software.
 
 ## Introduction ##
-We use EOF-Library for solving magnetohydrodynamic (MHD) problems, e.g., electromagnetic induction melting, stirring, levitation and other cases where metals interact with electromagnetic fields. 
-
-Other users have found it useful for plasma physics, convective cooling of electrical devices and other applications. EOF-Library allows coupling internal fields between almost any Elmer and OpenFOAM solvers.
+EOF-Library couples internal fields between Elmer FEM and OpenFOAM. Applications are 
+* Magnetohydrodynamics (MHD)
+* Microwave ehating
+* Plasma physics
+* Convective cooling of electrical devices and machines
 
 ## Requirements ##
 * **Both Elmer and OpenFOAM must use the same OpenMPI version!**
@@ -111,7 +114,7 @@ eofCompile
 ```
 * Colmpile OpenFOAM solver
 ```
-cd EOF-Library/solvers/mhdInterFoam
+cd EOF-Library/solvers/mhdInterFoam6
 wmake
 ```
 
