@@ -3,12 +3,19 @@ sinclude $(RULES)/mplib$(WM_MPLIB)
 
 FOAM_MAJOR_VERSION=$(firstword $(subst ., ,$(WM_PROJECT_VERSION)))
 
-ifeq ($(shell test $(FOAM_MAJOR_VERSION) -lt 6; echo $$?),0)
-    $(info ************  OF version <6 ************)
+ifeq ($(FOAM_MAJOR_VERSION),v1812)
+    $(info ************  OF version v1812 ************)
     EOF_LIBS = -L$(FOAM_USER_LIBBIN) -lPstream
     EOF_INC = -I../commSplit/lnInclude
 else
-    EOF_INC = -I$(LIB_SRC)/Pstream/mpi/lnInclude
+    ifeq ($(shell test $(FOAM_MAJOR_VERSION) -lt 6; echo $$?),0)
+        $(info ************  OF version <6 ************)
+        EOF_LIBS = -L$(FOAM_USER_LIBBIN) -lPstream
+        EOF_INC = -I../commSplit/lnInclude
+    else
+        $(info ************  OF version $(FOAM_MAJOR_VERSION) ************)
+        EOF_INC = -I$(LIB_SRC)/Pstream/mpi/lnInclude
+    endif
 endif
 
 EXE_INC  = \
