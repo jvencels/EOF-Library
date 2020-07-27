@@ -84,7 +84,7 @@ mpirun -n 2 mhdInterFoam -parallel : -n 2 ElmerSolver_mpi case.sif
 ```
 sudo apt-get install git cmake gfortran libblas-dev liblapack-dev
 ```
-* Download OpenFOAM 6.0 source code, configure and compile it (https://openfoam.org/download/6-source/)
+* Download OpenFOAM source code, configure and compile it
 * Download Elmer from developers repo (https://github.com/ElmerCSC/elmerfem).
 
 * Configure and compile Elmer with `-DWITH_MPI=TRUE` by following these steps (https://www.csc.fi/web/elmer/sources-and-compilation). In short .., we create build folder and call CMake from this folder:

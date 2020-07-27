@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=eoflibrary/elmer84_of6:latest
+ARG BASE_IMAGE=eoflibrary/elmerdev_of7:latest
 # --build-arg BASE_IMAGE=eoflibrary/elmer84_of6_debug:latest
 
 FROM $BASE_IMAGE

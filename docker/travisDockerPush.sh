@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dockerImageName="eoflibrary/eof_elmer84_of6"
+dockerImageName="eoflibrary/eof_elmerdev_of7"
 
 echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
