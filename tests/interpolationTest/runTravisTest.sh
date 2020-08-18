@@ -11,6 +11,7 @@ decomposePar
 
 for case in *.sif; do
   rm TEST.PASSED*
+  rm *.out
   mpirun -n 2 interpolationTestFoam -parallel : -n 2 ElmerSolver_mpi $case
   if [[ $(< TEST.PASSED*) != "1" ]]; then
     nFails=$((nFails+1))
