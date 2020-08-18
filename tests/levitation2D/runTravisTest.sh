@@ -3,7 +3,7 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 nFails=0
 
-wmake $EOF_HOME/solvers/mhdInterFoam6
+wmake $EOF_HOME/solvers/mhdInterFoam7
 
 ElmerGrid 2 2 meshElmer -metis 2
 setFields

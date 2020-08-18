@@ -2,7 +2,7 @@
 
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-. /opt/openfoam6/etc/bashrc
+. /opt/openfoam7/etc/bashrc
 . ../etc/bashrc
 
 eofCompile &>> travisTests.log
