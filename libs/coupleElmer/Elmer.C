@@ -32,6 +32,8 @@ Web:       http://eof-library.com
 
 #include "Elmer.H"
 #include <new>
+#include <iostream>
+#include <fstream>
 #include "interpolation.H"
 #include "dynamicFvMesh.H"
 
@@ -219,27 +221,50 @@ void Foam::Elmer<meshT>::initialize()
             ELp[i].nFoundElements = 0; // keep this
             if (!ELp[i].boxOverlap) continue;
             MPI_Test_Sleep(ELp[i].reqRecv);
-            for ( j=0; j<ELp[i].nElem; j++ ) {
-                point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
 
-                nElemDone++;
-                if(MPI_Wtime()-localTime>30 || nElemDone==nCommElem) {
-                    Pout << 100.0*nElemDone/nCommElem << "% done, search speed "
-                         << 2*(nElemDone-nElemDonePrev) << " points/min, remaining "
-                         << nCommElem-nElemDone << " points" << endl;
-                    localTime = MPI_Wtime();
-                    nElemDonePrev = nElemDone;
+            string fname = "O2E-" + std::to_string(myLocalRank) + "-" + std::to_string(i) + ".out";
+            std::ifstream f(fname);
+
+            if(f.good()) {
+                Info<< "O2E pair file exist.." << endl;
+                for ( j=0; j<ELp[i].nElem; j++ ) {
+                    f >> ELp[i].foundElement[j];
+                    if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
                 }
+            }
+            else {
+                Info<< "O2E pair file does not exist, creating.." << endl;
+
+                f.close();
+                std::ofstream f(fname);
+
+                for ( j=0; j<ELp[i].nElem; j++ ) {
+                    point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
+
+                    nElemDone++;
+                    if(MPI_Wtime()-localTime>30 || nElemDone==nCommElem) {
+                        Pout << 100.0*nElemDone/nCommElem << "% done, search speed "
+                             << 2*(nElemDone-nElemDonePrev) << " points/min, remaining "
+                             << nCommElem-nElemDone << " points" << endl;
+                        localTime = MPI_Wtime();
+                        nElemDonePrev = nElemDone;
+                    }
 
 #if (FOAM_MAJOR_VERSION == 2)
 #warning "You are using OF v2.x.x. findCell uses slow search algorithm, be patient!"
-                ELp[i].foundElement[j] = mesh_.findCell(tmpPoint,polyMesh::FACEPLANES);
+                    ELp[i].foundElement[j] = mesh_.findCell(tmpPoint,polyMesh::FACEPLANES);
 #else
-                ELp[i].foundElement[j] = mesh_.findCell(tmpPoint);
+                    ELp[i].foundElement[j] = mesh_.findCell(tmpPoint);
 #endif
 
-                if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
+                    if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
+
+                    f << ELp[i].foundElement[j] << std::endl;
+                }
             }
+
+            f.close();
+
             //Pout<< "Found " << ELp[i].nFoundElements << " elements from Elmer #" << i << endl;
             MPI_Isend(&ELp[i].nFoundElements, 1, MPI_INT, ELp[i].globalRank, 895,
                       MPI_COMM_WORLD, &ELp[i].reqSend);
@@ -310,6 +335,28 @@ void Foam::Elmer<meshT>::recvVector(volVectorField& field)
     int i, j, dim;
 
     for (dim=0; dim<3; dim++) { 
+        for ( i=0; i<totElmerRanks; i++ ) {
+            if ( ELp[i].nFoundCells == 0 ) continue;
+            MPI_Irecv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 1000,
+                      MPI_COMM_WORLD, &ELp[i].reqRecv);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            if ( ELp[i].nFoundCells == 0 ) continue;
+            MPI_Test_Sleep(ELp[i].reqRecv);
+            for (j=0; j<ELp[i].nFoundCells; j++ ) {
+                field[ELp[i].foundCellsIndx[j]].component(dim) = ELp[i].recvBuffer0[j];
+            }
+        }
+    }
+}
+
+
+template <class meshT>
+void Foam::Elmer<meshT>::recvSymmTensor(volSymmTensorField& field)
+{
+    int i, j, dim;
+
+    for (dim=0; dim<6; dim++) { 
         for ( i=0; i<totElmerRanks; i++ ) {
             if ( ELp[i].nFoundCells == 0 ) continue;
             MPI_Irecv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 1000,

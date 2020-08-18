@@ -85,6 +85,9 @@ public:
         //- Get interpolated vector field at cell centres from Elmer
         void recvVector(volVectorField& field);
 
+        //- Get interpolated symmetric tensor field at cell centres from Elmer
+        void recvSymmTensor(volSymmTensorField& field);
+
         //- Simulation status (1=ok, 0=lastIter, -1=error)
         void sendStatus(int status);
 
