@@ -18,7 +18,7 @@ This software is maintained by [Juris Vencels](https://lv.linkedin.com/in/vencel
 ## Introduction ##
 EOF-Library couples internal fields between Elmer FEM and OpenFOAM. Applications are 
 * Magnetohydrodynamics (MHD)
-* Microwave ehating
+* Microwave heating
 * Plasma physics
 * Convective cooling of electrical devices and machines
 
@@ -112,7 +112,7 @@ mpirun --version
 ```
 eofCompile
 ```
-* Colmpile OpenFOAM solver
+* Compile OpenFOAM solver
 ```
 cd EOF-Library/solvers/mhdInterFoam6
 wmake
