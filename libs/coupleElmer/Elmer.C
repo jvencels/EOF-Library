@@ -374,6 +374,28 @@ void Foam::Elmer<meshT>::recvSymmTensor(volSymmTensorField& field)
 
 
 template <class meshT>
+void Foam::Elmer<meshT>::recvDiagTensor(volTensorField& field)
+{
+    int i, j, dim;
+
+    for (dim=0; dim<3; dim++) { 
+        for ( i=0; i<totElmerRanks; i++ ) {
+            if ( ELp[i].nFoundCells == 0 ) continue;
+            MPI_Irecv(ELp[i].recvBuffer0, ELp[i].nFoundCells, MPI_DOUBLE, ELp[i].globalRank, 1000,
+                      MPI_COMM_WORLD, &ELp[i].reqRecv);
+        }
+        for ( i=0; i<totElmerRanks; i++ ) {
+            if ( ELp[i].nFoundCells == 0 ) continue;
+            MPI_Test_Sleep(ELp[i].reqRecv);
+            for (j=0; j<ELp[i].nFoundCells; j++ ) {
+                field[ELp[i].foundCellsIndx[j]].component(4*dim) = ELp[i].recvBuffer0[j];
+            }
+        }
+    }
+}
+
+
+template <class meshT>
 void Foam::Elmer<meshT>::sendScalar(volScalarField& field)
 {
     int i, j;
@@ -498,7 +520,11 @@ void Foam::Elmer<meshT>::MPI_Test_Sleep(MPI_Request& req)
     while ( true ) {
         MPI_Test( &req, &flag, MPI_STATUS_IGNORE);
         if (flag) break;
-        nanosleep((const struct timespec[]){{0, 1000000L}}, NULL);
+        //nanosleep((const struct timespec[]){{0, 1000000L}}, NULL);
+        struct timespec tim;
+        tim.tv_sec = 0;
+        tim.tv_nsec = 1000000L;
+        nanosleep(&tim, NULL);
     }
 }
 

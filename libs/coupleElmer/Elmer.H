@@ -88,6 +88,9 @@ public:
         //- Get interpolated symmetric tensor field at cell centres from Elmer
         void recvSymmTensor(volSymmTensorField& field);
 
+        //- Get interpolated vector as a diagonal tensor field at cell centres from Elmer
+        void recvDiagTensor(volTensorField& field);
+        
         //- Simulation status (1=ok, 0=lastIter, -1=error)
         void sendStatus(int status);
 
