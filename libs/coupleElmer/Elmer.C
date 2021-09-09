@@ -40,12 +40,13 @@ Web:       http://eof-library.com
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template <class meshT>
-Foam::Elmer<meshT>::Elmer(const meshT& mesh, int mode, bool init)
+Foam::Elmer<meshT>::Elmer(const meshT& mesh, int mode, bool init, bool multiregion)
 :
 mesh_(mesh),
 mode_(mode),
 myBoundBox(mesh.points(),false)
 {
+    multiregion_ = multiregion;
     if(init) initialize();
 }
 
@@ -225,7 +226,7 @@ void Foam::Elmer<meshT>::initialize()
             string fname = "O2E-" + std::to_string(myLocalRank) + "-" + std::to_string(i) + ".out";
             std::ifstream f(fname);
 
-            if(f.good()) {
+            if(f.good() && !multiregion_) {
                 Info<< "O2E pair file exist.." << endl;
                 for ( j=0; j<ELp[i].nElem; j++ ) {
                     f >> ELp[i].foundElement[j];
@@ -259,7 +260,7 @@ void Foam::Elmer<meshT>::initialize()
 
                     if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
 
-                    f << ELp[i].foundElement[j] << std::endl;
+                    if (!multiregion_) f << ELp[i].foundElement[j] << std::endl;
                 }
             }
 

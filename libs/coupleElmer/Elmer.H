@@ -68,7 +68,7 @@ public:
     // Public data
 
         //- Construct and initialize if needed
-        Elmer(const meshT& mesh, int mode, bool init=true);
+        Elmer(const meshT& mesh, int mode, bool init=true, bool multiregion=false);
 
         //- Initialize
         void initialize();
@@ -138,6 +138,9 @@ private:
 
         //- Coupling mode: 1=send, -1=receive, 0=both
         const int mode_;
+
+        //- Multiregion OF mesh
+        bool multiregion_;
 
         //- Number of cells for this OpenFOAM MPI rank
         int nCells;
