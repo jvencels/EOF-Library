@@ -7,6 +7,9 @@ ifeq ($(FOAM_MAJOR_VERSION),v1812)
     $(info ************  OF version v1812 ************)
     EOF_LIBS = -L$(FOAM_USER_LIBBIN) -lPstream
     EOF_INC = -I../commSplit/lnInclude
+    DYN_INC = -I$(LIB_SRC)/dynamicFvMesh/lnInclude 
+    DYN_LIBS = -ldynamicFvMesh
+    FVOPT_LIBS = -lfvOptions
 else
     ifeq ($(shell test $(FOAM_MAJOR_VERSION) -lt 6; echo $$?),0)
         $(info ************  OF version <6 ************)
@@ -16,11 +19,22 @@ else
         $(info ************  OF version $(FOAM_MAJOR_VERSION) ************)
         EOF_INC = -I$(LIB_SRC)/Pstream/mpi/lnInclude
     endif
+    ifeq ($(shell test $(FOAM_MAJOR_VERSION) -lt 9; echo $$?),0)
+        $(info ************  OF version <9 ************)
+        DYN_INC = -I$(LIB_SRC)/dynamicFvMesh/lnInclude 
+        DYN_LIBS = -ldynamicFvMesh
+        FVOPT_LIBS = -lfvOptions
+    endif
+    ifeq ($(shell test $(FOAM_MAJOR_VERSION) -lt 10; echo $$?),0)
+        $(info ************  OF version <10 ************)
+        DYN_INC = -I$(LIB_SRC)/dynamicFvMesh/lnInclude
+        DYN_LIBS = -ldynamicFvMesh
+    endif
 endif
 
 EXE_INC  = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
-    -I$(LIB_SRC)/dynamicFvMesh/lnInclude \
+    $(DYN_INC) \
     -I$(LIB_SRC)/meshTools/lnInclude \
     $(PFLAGS) $(PINC) -std=gnu++0x \
     -DFOAM_MAJOR_VERSION=$(FOAM_MAJOR_VERSION) \
@@ -30,6 +44,6 @@ EXE_INC  = \
 LIB_LIBS = \
     -lfiniteVolume \
     -lmeshTools \
-    -ldynamicFvMesh \
-    -lfvOptions \
+    $(DYN_LIBS) \
+    $(FVOPT_LIBS) \
     $(EOF_LIBS)
