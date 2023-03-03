@@ -35,7 +35,9 @@ Web:       http://eof-library.com
 #include <iostream>
 #include <fstream>
 #include "interpolation.H"
+#if (FOAM_MAJOR_VERSION == v1812 || FOAM_MAJOR_VERSION < 10)
 #include "dynamicFvMesh.H"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -531,6 +533,8 @@ void Foam::Elmer<meshT>::MPI_Test_Sleep(MPI_Request& req)
 
 // explicit instantiations
 template class Elmer<fvMesh>;
+#if (FOAM_MAJOR_VERSION == v1812 || FOAM_MAJOR_VERSION < 10)
 template class Elmer<dynamicFvMesh>;
+#endif
 
 // ************************************************************************* //
