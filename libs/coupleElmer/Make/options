@@ -2,6 +2,7 @@ sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
 sinclude $(RULES)/mplib$(WM_MPLIB)
 
 FOAM_MAJOR_VERSION=$(firstword $(subst ., ,$(WM_PROJECT_VERSION)))
+PFLAGS_ALL = $(PFLAGS) $(PINC) -std=gnu++0x
 
 ifeq ($(FOAM_MAJOR_VERSION),v1812)
     $(info ************  OF version v1812 ************)
@@ -28,13 +29,17 @@ else
         DYN_INC = -I$(LIB_SRC)/dynamicFvMesh/lnInclude
         DYN_LIBS = -ldynamicFvMesh
     endif
+    ifeq ($(shell test $(FOAM_MAJOR_VERSION) -ge 11; echo $$?),0)
+        $(info ************  OF version >=11 ************)
+        PFLAGS_ALL = $(PFLAGS) $(PINC)
+    endif
 endif
 
 EXE_INC  = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     $(DYN_INC) \
     -I$(LIB_SRC)/meshTools/lnInclude \
-    $(PFLAGS) $(PINC) -std=gnu++0x \
+    $(PFLAGS_ALL)\
     -DFOAM_MAJOR_VERSION=$(FOAM_MAJOR_VERSION) \
     -Wno-old-style-cast \
     $(EOF_INC)
