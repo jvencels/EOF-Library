@@ -47,7 +47,15 @@ Original Date: 12.12.2016.
 #define FatalErrorInFunction FatalErrorIn(FUNCTION_NAME)
 #endif
 
+#if (FOAM_MAJOR_VERSION == v1812 || FOAM_MAJOR_VERSION < 11)
 #include "fvCFD.H"
+#else
+#include "fvMesh.H"
+#ifndef namespaceFoam
+#define namespaceFoam
+    using namespace Foam;
+#endif
+#endif
 #include "PstreamGlobals.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
