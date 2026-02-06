@@ -1,0 +1,197 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "meshElmer"
+End
+
+Simulation
+  Coordinate System = String "Cartesian 3D"
+  Simulation Type = Steady
+
+  Steady State Max Iterations = 1000000
+  Steady State Min Iterations = 1000000
+
+  Output Intervals = 1
+  Post File = case.ep
+End
+
+
+! -------------------------
+! Body / One master equation (like your working pattern)
+! -------------------------
+Body 1
+  Name = "fluid"
+  Target Bodies(1) = 1
+  Equation = 1
+  Material = 1
+  Body Force = 1
+End
+
+Equation 1
+  Name = "EOF_HallChannel"
+  Active Solvers(10) = 1 2 3 4 5 6 7 8 9 10
+End
+
+
+! --------------------------------------------------
+! 1) Declare imported scalars provided by OpenFOAM
+!    (KEEP Exec=Always like the working file)
+!    IMPORTANT: Each solver must have a UNIQUE Equation string
+! --------------------------------------------------
+
+Solver 1
+  Exec Solver = Always
+  Equation = "DeclareConductivity"
+  Procedure = "AllocateSolver" "AllocateSolver"
+  Variable = String "Electric Conductivity"
+  Variable DOFs = 1
+End
+
+Solver 2
+  Exec Solver = Always
+  Equation = "DeclareUx"
+  Procedure = "AllocateSolver" "AllocateSolver"
+  Variable = String "Ux"
+  Variable DOFs = 1
+End
+
+Solver 3
+  Exec Solver = Always
+  Equation = "DeclareUy"
+  Procedure = "AllocateSolver" "AllocateSolver"
+  Variable = String "Uy"
+  Variable DOFs = 1
+End
+
+Solver 4
+  Exec Solver = Always
+  Equation = "DeclareUz"
+  Procedure = "AllocateSolver" "AllocateSolver"
+  Variable = String "Uz"
+  Variable DOFs = 1
+End
+
+Solver 5
+  Exec Solver = Always
+  Equation = "DeclareBx"
+  Procedure = "AllocateSolver" "AllocateSolver"
+  Variable = String "Bx"
+  Variable DOFs = 1
+End
+
+Solver 6
+  Exec Solver = Always
+  Equation = "DeclareBy"
+  Procedure = "AllocateSolver" "AllocateSolver"
+  Variable = String "By"
+  Variable DOFs = 1
+End
+
+Solver 7
+  Exec Solver = Always
+  Equation = "DeclareBz"
+  Procedure = "AllocateSolver" "AllocateSolver"
+  Variable = String "Bz"
+  Variable DOFs = 1
+End
+
+
+! --------------------------------------------------
+! 2) OpenFOAM → Elmer: fill imported fields
+!    (KEEP Exec=Always, solver-order dependent like working)
+! --------------------------------------------------
+Solver 8
+  Exec Solver = Always
+  Equation = "OpenFOAM2Elmer"
+  Procedure = "OpenFOAM2Elmer" "OpenFOAM2ElmerSolver"
+
+  Target Variable 1 = String "Electric Conductivity"
+  Target Variable 2 = String "Ux"
+  Target Variable 3 = String "Uy"
+  Target Variable 4 = String "Uz"
+  Target Variable 5 = String "Bx"
+  Target Variable 6 = String "By"
+  Target Variable 7 = String "Bz"
+End
+
+
+! --------------------------------------------------
+! 3) Static current solve for Potential
+!    (Swap OG StatCurrentSolve -> your custom MHDSolve solver)
+!    Keep the "working-like" equation naming style here.
+! --------------------------------------------------
+Solver 9
+  Exec Solver = Always
+  Equation = "Static Current Solver"
+  Procedure = "MHDSolve" "StatCurrentSolver"
+
+  Variable = Potential
+  Variable DOFs = 1
+
+  Calculate Volume Current = Logical True
+  Calculate Joule Heating  = Logical True
+
+  Linear System Solver = Iterative
+  Linear System Iterative Method = BiCGStab
+  Linear System Preconditioning = ILU0
+  Linear System Max Iterations = 500
+  Linear System Convergence Tolerance = 1.0e-10
+End
+
+
+! --------------------------------------------------
+! 4) Elmer -> OpenFOAM: export computed results
+! --------------------------------------------------
+Solver 10
+  Exec Solver = Always
+  Equation = "Elmer2OpenFOAM"
+  Procedure = "Elmer2OpenFOAM" "Elmer2OpenFOAMSolver"
+
+  Target Variable 1 = String "Volume Current 1"
+  Target Variable 2 = String "Volume Current 2"
+  Target Variable 3 = String "Volume Current 3"
+  Target Variable 4 = String "Joule Heating"
+End
+
+
+! -------------------------
+! Material
+! -------------------------
+Material 1
+  Name = "Conducting Fluid"
+
+  Electric Conductivity = Variable "Electric Conductivity"
+    Real MATC "tx"
+End
+
+
+! -------------------------
+! Body Force: none
+! -------------------------
+Body Force 1
+  Name = "NoSource"
+End
+
+
+! -------------------------
+! Boundary Conditions
+! -------------------------
+Boundary Condition 1
+  ! FaradayMinusY (reference / ground)
+  Target Boundaries(1) = 1
+  Current Density BC = Logical True
+  Current Density = Real 0.0
+End
+
+Boundary Condition 2
+  ! FaradayPlusY (as in your working file)
+  Target Boundaries(1) = 2
+  Current Density BC = Logical True
+  Current Density = Real 0.0
+End
+
+Boundary Condition 3
+  ! SideWallsZ
+  Target Boundaries(1) = 5
+  Current Density BC = Logical True
+  Current Density = Real 0.0
+End

@@ -1,0 +1,38 @@
+FROM eoflibrary/eof_elmer84_of6:latest
+
+
+# The block below will rebuild Elmer from source. It works and can be used for testing things.
+
+USER root
+
+# install nano for in-container text editing
+RUN apt-get update && apt-get install -y --no-install-recommends nano sudo strace lldb
+
+# Allow openfoam user to sudo without password
+RUN echo "openfoam ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/openfoam \
+    && chmod 0440 /etc/sudoers.d/openfoam
+
+WORKDIR /home/openfoam
+
+# Remove the EOF-Library that ships inside the base image
+RUN rm -rf EOF-Library
+
+# This assumes you run `docker build` from your EOF fork root,
+COPY . EOF-Library
+
+WORKDIR /home/openfoam/EOF-Library
+
+# Add alias for initializing and building the project
+RUN echo 'alias init="cd ~ && eofCompile && cd EOF-Library && wmake solvers/mdhLinearHall && cp -r tests/linearHall runs && cd runs/linearHall "' >> ~/.bashrc
+RUN echo 'alias generate_mesh="cd ~/EOF-Library/runs/linearHall && rm -rf constant/polyMesh processor* meshElmer && blockMesh && decomposePar && ElmerGrid 14 2 channel.msh -out meshElmer -metis 2"' >> ~/.bashrc
+RUN echo 'alias configure_elmer="cd ~/EOF-Library/runs/linearHall && echo \"case.sif\" > ELMERSOLVER_STARTINFO"' >> ~/.bashrc
+RUN echo 'alias build_elmer_solver="sudo cp ~/EOF-Library/libs/solvers/MHDSolve/MHDSolve.F90 /opt/elmerfem/fem/src/modules/MHDSolve.F90 && cd /opt/elmerfem/build && sudo cmake .. && sudo make -j\$(nproc) MHDSolve && sudo make install"' >> ~/.bashrc
+RUN echo 'alias build_elmer_solver_debug="cd ~/EOF-Library/runs/linearHall && sudo cp ~/EOF-Library/libs/solvers/MHDSolve/MHDSolve.F90 /opt/elmerfem/fem/src/modules/MHDSolve.F90 && cd /opt/elmerfem/build && sudo cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_Fortran_FLAGS_DEBUG=\"-O0 -g -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow\" && sudo make -j\$(nproc) MHDSolve && sudo make install"' >> ~/.bashrc
+RUN echo 'alias run_sim="cd ~/EOF-Library/runs/linearHall && mpirun -n 2 mdhLinearHall -parallel : -n 2 ElmerSolver_mpi case.sif"' >> ~/.bashrc
+RUN echo 'alias finish_up="reconstructPar -case . && foamToVTK -case ."' >> ~/.bashrc
+
+# Run everything
+RUN echo 'alias run_all="init && build_elmer_solver && generate_mesh && configure_elmer && run_sim && finish_up"' >> ~/.bashrc
+
+# Run everything with Fortran BT
+RUN echo 'alias run_all_debug="init && build_elmer_solver_debug && generate_mesh && configure_elmer && run_sim && finish_up"' >> ~/.bashrc

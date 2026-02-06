@@ -1,0 +1,55 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  6                                     |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      B;
+}
+
+// Magnetic flux density [Tesla]
+dimensions      [1 0 -2 0 0 -1 0];
+
+// Uniform magnetic field in +z direction
+internalField   uniform (0 0 3);
+
+// Boundary conditions, zero at boundaries
+boundaryField
+{
+    InletX
+    {
+        type    zeroGradient;
+    }
+
+    OutletX
+    {
+        type    zeroGradient;
+    }
+    FaradayMinusY
+    {
+        type    zeroGradient;
+    }
+
+    FaradayPlusY
+    {
+        type    zeroGradient;
+    }
+
+    SideWallsZ
+    {
+        type    zeroGradient;
+    }
+
+    defaultFaces
+    {
+        type    zeroGradient;
+    }
+}

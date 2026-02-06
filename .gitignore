@@ -41,3 +41,6 @@ partitioning.*
 *.exe
 *.out
 *.app
+
+# IDEA
+.idea

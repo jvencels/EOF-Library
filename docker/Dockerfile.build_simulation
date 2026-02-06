@@ -1,0 +1,47 @@
+FROM eoflibrary/eof_elmer84_of6:latest
+
+USER root
+
+# Tools (combine apt calls into one layer)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nano strace sudo \
+ && rm -rf /var/lib/apt/lists/*
+
+# Allow openfoam user to sudo without password
+RUN echo "openfoam ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/openfoam \
+ && chmod 0440 /etc/sudoers.d/openfoam
+
+WORKDIR /home/openfoam
+
+# Remove the EOF-Library that ships inside the base image (if present)
+RUN rm -rf /home/openfoam/EOF-Library \
+ && mkdir -p /home/openfoam/EOF-Library
+
+# Copy your fork into the container (preserve directory structure)
+COPY libs/     /home/openfoam/EOF-Library/libs/
+COPY etc/      /home/openfoam/EOF-Library/etc/
+COPY Makefile  /home/openfoam/EOF-Library/Makefile
+
+WORKDIR /home/openfoam/EOF-Library
+
+RUN make elmer
+
+RUN make eof
+
+COPY solvers/  /home/openfoam/EOF-Library/solvers/
+
+RUN make solver
+
+# Ensure interactive shells know OpenFOAM + EOF env (helps aliases & PATH)
+RUN echo '. /opt/openfoam6/etc/bashrc' >> /home/openfoam/.bashrc \
+ && echo '. /home/openfoam/EOF-Library/etc/bashrc' >> /home/openfoam/.bashrc
+
+COPY tests/ /home/openfoam/EOF-Library/tests/
+RUN make simulation
+
+# Aliases (for interactive use)
+RUN echo 'alias run_sim="cd ~/EOF-Library/runs/linearHall && mpirun -n 2 mdhLinearHall -parallel : -n 2 ElmerSolver_mpi case.sif"' >> /home/openfoam/.bashrc \
+ && echo 'alias finish_up="reconstructPar -case . && foamToVTK -case ."' >> /home/openfoam/.bashrc \
+ && echo 'alias prepare_dir="rm -r ~/EOF-Library/runs/linearHall && mkdir -p ~/EOF-Library/runs/linearHall && cp -r ~/EOF-Library/tests/linearHall ~/EOF-Library/runs/"' >> /home/openfoam/.bashrc \
+ && echo 'alias run_all="prepare_dir && run_sim && finish_up"' >> /home/openfoam/.bashrc
+

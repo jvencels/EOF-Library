@@ -1,0 +1,41 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     mdhLinearHall;
+
+startFrom       startTime;
+startTime       0;
+
+stopAt          endTime;
+endTime         0.00005;
+
+deltaT          0.1;
+
+writeControl    timeStep;
+writeInterval   1;
+
+adjustTimeStep  yes; 
+
+purgeWrite      0;
+
+maxCo           0.002;
+maxDeltaT       1;
+
+functions { }
+
+
+// ************************************************************************* //

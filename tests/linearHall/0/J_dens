@@ -1,0 +1,59 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      J_dens;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Volume current desnity, J / m^2
+dimensions [0 -2 0 0 0 1 0];
+
+// Start from zero; Elmer overwrites this during coupling
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    InletX
+    {
+        type    zeroGradient;
+    }
+
+    OutletX
+    {
+        type    zeroGradient;
+    }
+    FaradayMinusY
+    {
+        type    zeroGradient;
+    }
+
+    FaradayPlusY
+    {
+        type    zeroGradient;
+    }
+
+    SideWallsZ
+    {
+        type    zeroGradient;
+    }
+
+    defaultFaces
+    {
+        type    zeroGradient;
+    }
+}
+
+
+// ************************************************************************* //
+
+

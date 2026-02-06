@@ -1,0 +1,51 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  Temperature field for mhdThermoInterFoam5 (argon plasma)
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      T;
+}
+
+// Temperature [K]
+dimensions      [0 0 0 1 0 0 0];
+
+internalField   uniform 500;
+
+boundaryField
+{
+    InletX
+    {
+        type    fixedValue;
+        value   uniform 2000;
+    }
+
+    OutletX
+    {
+        type    zeroGradient;
+    }
+
+    FaradayMinusY
+    {
+        type    zeroGradient;
+    }
+
+    FaradayPlusY
+    {
+        type    zeroGradient;
+    }
+
+    SideWallsZ
+    {
+        type    zeroGradient;
+    }
+
+    defaultFaces
+    {
+        type    zeroGradient;
+    }
+}

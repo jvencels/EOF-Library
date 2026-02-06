@@ -1,0 +1,8 @@
+! ----- names for bodies -----
+$ melt = 1
+$ air = 2
+$ indTop = 3
+$ indBtm = 4
+! ----- names for boundaries -----
+$ out = 5
+$ empty = 6

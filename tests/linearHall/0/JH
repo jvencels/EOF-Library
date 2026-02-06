@@ -1,0 +1,59 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      JH;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Joule heating power density [W/m^3]
+dimensions      [1 -1 -3 0 0 0 0];
+
+// Start from zero; Elmer overwrites this during coupling
+internalField   uniform 0;
+
+boundaryField
+{
+    InletX
+    {
+        type            zeroGradient;
+    }
+
+    OutletX
+    {
+        type    zeroGradient;
+    }
+    FaradayMinusY
+    {
+        type    zeroGradient;
+    }
+
+    FaradayPlusY
+    {
+        type    zeroGradient;
+    }
+
+    SideWallsZ
+    {
+        type    zeroGradient;
+    }
+
+    defaultFaces
+    {
+        type    zeroGradient;
+    }
+}
+
+
+// ************************************************************************* //
+
+

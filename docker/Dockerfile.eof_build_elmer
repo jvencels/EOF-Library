@@ -1,0 +1,81 @@
+FROM eoflibrary/eof_elmer84_of6:latest
+
+
+# The block below will rebuild Elmer from source. It works and can be used for testing things.
+
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends nano
+
+USER root
+
+# --------------------------------------------------
+# Build dependencies for Elmer
+# --------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git cmake g++ gfortran make \
+    libopenmpi-dev openmpi-bin \
+    libblas-dev liblapack-dev \
+    libmumps-dev \
+    libsuitesparse-dev \
+    libmetis-dev \
+    libhdf5-openmpi-dev \
+    python3 \
+    nano \
+    && rm -rf /var/lib/apt/lists/*
+
+# --------------------------------------------------
+# Rebuild Elmer FEM (source already present in base image)
+# --------------------------------------------------
+WORKDIR /opt/elmerfem
+
+# Make sure we're on a compatible version
+RUN git fetch --all && git checkout release-8.4
+
+# Clean any previous broken build
+RUN rm -rf build
+
+RUN mkdir build
+WORKDIR /opt/elmerfem/build
+
+RUN mkdir -p build
+WORKDIR /opt/elmerfem/build
+
+RUN cmake .. \
+  -DCMAKE_INSTALL_PREFIX=/usr/local \
+  -DWITH_MPI=ON \
+  -DWITH_MUMPS=ON \
+  -DWITH_HDF5=ON \
+  -DWITH_UMFPACK=ON \
+  -DWITH_ELECTROMAGNETICS=ON \
+  -DWITH_ELMERGUI=OFF \
+  -DWITH_ELMERICE=OFF \
+  -DWITH_LUA=ON
+
+RUN make -j$(nproc)
+RUN make install
+
+# --------------------------------------------------
+# Runtime environment
+# --------------------------------------------------
+ENV ELMER_HOME=/usr/local
+ENV ELMER_SOLVER_HOME=/usr/local
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV PATH=/usr/local/bin:$PATH
+
+WORKDIR /home/openfoam
+
+# Remove the EOF-Library that ships inside the base image
+RUN rm -rf EOF-Library
+
+# This assumes you run `docker build` from your EOF fork root,
+COPY . EOF-Library
+
+WORKDIR /home/openfoam/EOF-Library
+
+# Add alias for initializing and building the project
+RUN echo 'alias init="cd ~ && eofCompile && cd EOF-Library && wmake solvers/mdhLinearHall && cp -r tests/linearHall runs && cd runs/linearHall "' >> ~/.bashrc
+RUN echo 'alias generate_mesh="cd ~/EOF-Library/runs/linearHall && rm -rf processor* && blockMesh && decomposePar && ElmerGrid 14 2 channel.msh -out meshElmer -autoclean -merge 1e-8 -removeunused && ElmerGrid 2 2 meshElmer -metis 2"' >> ~/.bashrc
+RUN echo 'alias configure_elmer="cd ~/EOF-Library/runs/linearHall && echo \"case.sif\" > ELMERSOLVER_STARTINFO"' >> ~/.bashrc
+RUN echo 'alias run_sim="cd ~/EOF-Library/runs/linearHall && mpirun -n 2 mdhLinearHall -parallel : -n 2 ElmerSolver_mpi case.sif"' >> ~/.bashrc
+RUN echo 'alias finish_up="reconstructPar -case . && foamToVTK -case ."' >> ~/.bashrc
+RUN echo 'alias run_all="init && generate_mesh && configure_elmer && run_sim && finish_up"' >> ~/.bashrc
