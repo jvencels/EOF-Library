@@ -58,6 +58,16 @@ Original Date: 12.12.2016.
 #endif
 #include "PstreamGlobals.H"
 
+// Communicator of the OpenFOAM ranks only.
+// - openfoam.org and the commSplit libPstream overrides: PstreamGlobals::MPI_COMM_FOAM
+// - openfoam.com v2312+ with the installed libPstream: the world communicator
+//   created by the -mpi-split-by-appnum run-time option (UPstream::init)
+#ifdef EOF_NATIVE_WORLD_SPLIT
+#define EOF_COMM_FOAM (Foam::PstreamGlobals::MPICommunicators_[Foam::UPstream::worldComm])
+#else
+#define EOF_COMM_FOAM (Foam::PstreamGlobals::MPI_COMM_FOAM)
+#endif
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam

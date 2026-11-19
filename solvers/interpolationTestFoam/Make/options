@@ -1,28 +1,39 @@
 sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
 sinclude $(RULES)/mplib$(WM_MPLIB)
+sinclude $(GENERAL_RULES)/mpi-rules
 
 ifeq ($(EOF_SRC),)
     $(info EOF_SRC is not set, trying default location..)
-    EOF_INC = -I../../libs/coupleElmer/lnInclude  \
-              -I../../libs/commSplit/lnInclude
-else
-    EOF_INC = -I$(EOF_SRC)/coupleElmer/lnInclude \
-              -I$(EOF_SRC)/commSplit/lnInclude
+    EOF_SRC = ../../libs
 endif
 
 FOAM_MAJOR_VERSION=$(firstword $(subst ., ,$(WM_PROJECT_VERSION)))
 
-ifeq ($(shell test $(FOAM_MAJOR_VERSION) -lt 6; echo $$?),0)
-    $(info ************  OF version <6 ************)
-    EOF_LIBS = -lPstream
+ifeq ($(shell test "0$(FOAM_API)" -ge 2312 2>/dev/null; echo $$?),0)
+    ifeq ($(strip $(EOF_COMMSPLIT)),)
+        EOF_DEFS = -DEOF_NATIVE_WORLD_SPLIT
+        EOF_INC = -I$(EOF_SRC)/coupleElmer/lnInclude -I$(LIB_SRC)/Pstream/mpi/lnInclude
+        EOF_LIBS = -L$(FOAM_LIBBIN)/$(FOAM_MPI) -lPstream
+    else
+        EOF_DEFS =
+        EOF_INC = -I$(EOF_SRC)/coupleElmer/lnInclude -I$(EOF_SRC)/commSplit/$(FOAM_MAJOR_VERSION) -I$(EOF_SRC)/commSplit/lnInclude
+        EOF_LIBS = -lPstream
+    endif
 else
-    EOF_LIBS =
+    EOF_DEFS =
+    EOF_INC = -I$(EOF_SRC)/coupleElmer/lnInclude -I$(EOF_SRC)/commSplit/lnInclude
+    ifeq ($(shell test $(FOAM_MAJOR_VERSION) -lt 6; echo $$?),0)
+        EOF_LIBS = -lPstream
+    else
+        EOF_LIBS =
+    endif
 endif
 
 EXE_INC = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
     $(EOF_INC) \
+    $(EOF_DEFS) \
     $(PFLAGS) $(PINC)
 
 EXE_LIBS = \

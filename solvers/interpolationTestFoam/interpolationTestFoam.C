@@ -42,7 +42,6 @@ int main(int argc, char *argv[])
     receiving.sendStatus(0); // 1=ok, 0=lastIter, -1=error
     receiving.recvScalar(T);
 
-/*---------------------------------------------------------------------------*\
     volScalarField realT
     (
         IOobject
@@ -69,7 +68,6 @@ int main(int argc, char *argv[])
     realT.write();
 
     Info<< "Elmer2OpenFOAM error: " << Foam::sqrt(gSum((sqr(realT-T))()))/Foam::sqrt(gSum((sqr(realT))())) << "\n" << endl;
-\*---------------------------------------------------------------------------*/
 
     fvOptions.correct(T);
     T.write();
