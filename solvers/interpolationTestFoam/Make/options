@@ -33,12 +33,12 @@ EXE_INC = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
     $(EOF_INC) \
+    -DFOAM_MAJOR_VERSION=$(FOAM_MAJOR_VERSION) \
     $(EOF_DEFS) \
     $(PFLAGS) $(PINC)
 
 EXE_LIBS = \
     -lfiniteVolume \
-    -lfvOptions \
     -lmeshTools \
     -L$(FOAM_USER_LIBBIN) \
     $(EOF_LIBS) \
