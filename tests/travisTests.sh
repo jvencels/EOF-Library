@@ -11,6 +11,7 @@ nTestsPass=0
 nTestsFail=0
  
 for testDir in */ ; do
+  case $testDir in *v2606/) continue ;; esac   # openfoam.com tests: see travisTests_v2606.sh
   echo "Running test:" $testDir
   ./$testDir/runTravisTest.sh &> tmp.log
   status=$?

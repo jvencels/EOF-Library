@@ -1,9 +1,27 @@
 sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
 sinclude $(RULES)/mplib$(WM_MPLIB)
+sinclude $(GENERAL_RULES)/mpi-rules
 
 FOAM_MAJOR_VERSION=$(firstword $(subst ., ,$(WM_PROJECT_VERSION)))
 PFLAGS_ALL = $(PFLAGS) $(PINC) -std=gnu++0x
 
+ifeq ($(shell test "0$(FOAM_API)" -ge 2312 2>/dev/null; echo $$?),0)
+    PFLAGS_ALL = $(PFLAGS) $(PINC)
+    DYN_INC = -I$(LIB_SRC)/dynamicFvMesh/lnInclude
+    DYN_LIBS = -ldynamicFvMesh
+    FVOPT_LIBS = -lfvOptions
+    ifeq ($(strip $(EOF_COMMSPLIT)),)
+        $(info ************  OF .com API $(FOAM_API): native world split (-mpi-split-by-appnum) ************)
+        EOF_DEFS = -DEOF_NATIVE_WORLD_SPLIT
+        EOF_INC = -I$(LIB_SRC)/Pstream/mpi/lnInclude
+        EOF_LIBS = -L$(FOAM_LIBBIN)/$(FOAM_MPI) -lPstream
+    else
+        $(info ************  OF .com API $(FOAM_API): commSplit libPstream override ************)
+        EOF_DEFS =
+        EOF_INC = -I../commSplit/$(FOAM_MAJOR_VERSION) -I../commSplit/lnInclude
+        EOF_LIBS = -L$(FOAM_USER_LIBBIN) -lPstream
+    endif
+else
 ifeq ($(FOAM_MAJOR_VERSION),v1812)
     $(info ************  OF version v1812 ************)
     EOF_LIBS = -L$(FOAM_USER_LIBBIN) -lPstream
@@ -34,6 +52,7 @@ else
         PFLAGS_ALL = $(PFLAGS) $(PINC)
     endif
 endif
+endif
 
 EXE_INC  = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
@@ -41,6 +60,7 @@ EXE_INC  = \
     -I$(LIB_SRC)/meshTools/lnInclude \
     $(PFLAGS_ALL)\
     -DFOAM_MAJOR_VERSION=$(FOAM_MAJOR_VERSION) \
+    $(EOF_DEFS) \
     -Wno-old-style-cast \
     $(EOF_INC)
 

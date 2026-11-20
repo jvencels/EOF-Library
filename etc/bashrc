@@ -7,7 +7,26 @@ eofPull() {
     git -C $EOF_HOME pull
 }
 
+# The commSplit libPstream override must be built before coupleElmer for
+# OpenFOAM v1812, openfoam.org versions below 6, and openfoam.com v2312+
+# when EOF_COMMSPLIT is set.
+eofNeedsCommSplit() {
+    local major=${WM_PROJECT_VERSION%%.*}
+    case "$major" in
+        v1812)
+            return 0 ;;
+        v*)
+            [ -n "$EOF_COMMSPLIT" ] && [ "0$FOAM_API" -ge 2312 ] && return 0 ;;
+        *)
+            [ "$major" -lt 6 ] 2>/dev/null && return 0 ;;
+    esac
+    return 1
+}
+
 eofCompile() {
+    if eofNeedsCommSplit; then
+        wmake $EOF_SRC/commSplit
+    fi
     wmake $EOF_SRC/coupleElmer
     elmerf90 -o $EOF_SRC/Elmer2OpenFOAM.so -J$EOF_SRC $EOF_SRC/Elmer2OpenFOAM.F90
     elmerf90 -o $EOF_SRC/OpenFOAM2Elmer.so -J$EOF_SRC $EOF_SRC/OpenFOAM2Elmer.F90

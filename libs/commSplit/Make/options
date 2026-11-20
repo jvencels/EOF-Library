@@ -1,5 +1,6 @@
 sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
 sinclude $(RULES)/mplib$(WM_MPLIB)
+sinclude $(GENERAL_RULES)/mpi-rules
 
 ifeq ($(strip $(OF5DEV)),)
     EOF_INC =

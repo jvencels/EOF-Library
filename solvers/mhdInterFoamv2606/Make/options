@@ -1,0 +1,64 @@
+sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
+sinclude $(RULES)/mplib$(WM_MPLIB)
+sinclude $(GENERAL_RULES)/mpi-rules
+
+ifeq ($(EOF_SRC),)
+    $(info EOF_SRC is not set, trying default location..)
+    EOF_SRC = ../../libs
+endif
+
+FOAM_MAJOR_VERSION=$(firstword $(subst ., ,$(WM_PROJECT_VERSION)))
+
+ifeq ($(shell test "0$(FOAM_API)" -ge 2312 2>/dev/null; echo $$?),0)
+    ifeq ($(strip $(EOF_COMMSPLIT)),)
+        EOF_DEFS = -DEOF_NATIVE_WORLD_SPLIT
+        EOF_INC = -I$(EOF_SRC)/coupleElmer/lnInclude -I$(LIB_SRC)/Pstream/mpi/lnInclude
+        EOF_LIBS = -L$(FOAM_LIBBIN)/$(FOAM_MPI) -lPstream
+    else
+        EOF_DEFS =
+        EOF_INC = -I$(EOF_SRC)/coupleElmer/lnInclude -I$(EOF_SRC)/commSplit/$(FOAM_MAJOR_VERSION) -I$(EOF_SRC)/commSplit/lnInclude
+        EOF_LIBS = -lPstream
+    endif
+else
+    $(error mhdInterFoamv2606 is the openfoam.com v2606 interFoam: build it with openfoam.com v2606)
+endif
+
+EXE_INC = \
+    -I$(FOAM_SOLVERS)/multiphase/VoF \
+    -I$(LIB_SRC)/phaseSystemModels/twoPhaseInter/incompressibleInterPhaseTransportModel/lnInclude \
+    -I$(LIB_SRC)/phaseSystemModels/twoPhaseInter/VoFphaseIncompressibleTurbulenceModels/lnInclude \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/sampling/lnInclude \
+    -I$(LIB_SRC)/dynamicFvMesh/lnInclude \
+    -I$(LIB_SRC)/transportModels \
+    -I$(LIB_SRC)/transportModels/incompressible/lnInclude \
+    -I$(LIB_SRC)/transportModels/interfaceProperties/lnInclude \
+    -I$(LIB_SRC)/transportModels/twoPhaseMixture/lnInclude \
+    -I$(LIB_SRC)/TurbulenceModels/turbulenceModels/lnInclude \
+    -I$(LIB_SRC)/TurbulenceModels/incompressible/lnInclude \
+    -I$(LIB_SRC)/TurbulenceModels/phaseIncompressible/lnInclude \
+    -I$(LIB_SRC)/transportModels/immiscibleIncompressibleTwoPhaseMixture/lnInclude \
+    $(EOF_INC) \
+    -DFOAM_MAJOR_VERSION=$(FOAM_MAJOR_VERSION) \
+    $(EOF_DEFS) \
+    $(PFLAGS) $(PINC)
+
+EXE_LIBS = \
+    -lfiniteVolume \
+    -lfvOptions \
+    -lmeshTools \
+    -lsampling \
+    -ldynamicFvMesh \
+    -lincompressibleTransportModels \
+    -linterfaceProperties \
+    -limmiscibleIncompressibleTwoPhaseMixture \
+    -ltwoPhaseProperties \
+    -lturbulenceModels \
+    -lincompressibleTurbulenceModels \
+    -lwaveModels \
+    -lVoFphaseTurbulentTransportModels \
+    -lincompressibleInterPhaseTransportModels \
+    -L$(FOAM_USER_LIBBIN) \
+    $(EOF_LIBS) \
+    -lElmer

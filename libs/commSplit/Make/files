@@ -1,8 +1,9 @@
 FOAM_MAJOR_VERSION=$(firstword $(subst ., ,$(WM_PROJECT_VERSION)))
 
-$(FOAM_MAJOR_VERSION)/UOPwrite.C
-$(FOAM_MAJOR_VERSION)/UIPread.C
-$(FOAM_MAJOR_VERSION)/UPstream.C
-$(FOAM_MAJOR_VERSION)/PstreamGlobals.C
+FILES_v2606 = v2606/PstreamGlobals.C v2606/UPstream.C v2606/UPstreamAllToAll.C v2606/UPstreamBroadcast.C v2606/UPstreamCommunicator.C v2606/UPstreamGatherScatter.C v2606/UPstreamReduce.C v2606/UPstreamRequest.C v2606/UPstreamFile.C v2606/UPstreamWindow.C v2606/UIPstreamRead.C v2606/UOPstreamWrite.C v2606/UIPBstreamRead.C v2606/UOPBstreamWrite.C
+FILES_DEFAULT = $(FOAM_MAJOR_VERSION)/UOPwrite.C $(FOAM_MAJOR_VERSION)/UIPread.C $(FOAM_MAJOR_VERSION)/UPstream.C $(FOAM_MAJOR_VERSION)/PstreamGlobals.C
+FILES_SELECTED = $(if $(FILES_$(FOAM_MAJOR_VERSION)),$(FILES_$(FOAM_MAJOR_VERSION)),$(FILES_DEFAULT))
+
+$(FILES_SELECTED)
 
 LIB = $(FOAM_USER_LIBBIN)/libPstream
