@@ -174,6 +174,14 @@ mpirun -np 2 ElmerSolver_mpi case.sif : -np 2 mhdInterFoamv2606 -parallel -mpi-s
 export EOF_COMMSPLIT=1
 eofCompile
 wmake $EOF_HOME/solvers/mhdInterFoamv2606
+```
+  Then copy the test case out of the repository, prepare it and run it:
+```
+cp -r $EOF_HOME/tests/levitation2Dv2606 ~/runs/
+cd ~/runs/levitation2Dv2606
+ElmerGrid 2 2 meshElmer -metis 2
+setFields
+decomposePar
 mpirun -np 2 mhdInterFoamv2606 -parallel : -np 2 ElmerSolver_mpi case.sif
 ```
   The variable is not set by default; the library and the launch order must
