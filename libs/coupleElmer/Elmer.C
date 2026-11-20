@@ -250,7 +250,8 @@ void Foam::Elmer<meshT>::initialize()
                 Info<< "O2E pair file does not exist, creating.." << endl;
 
                 f.close();
-                std::ofstream f(fname);
+                std::ofstream out;
+                if (!multiregion_) out.open(fname);
 
                 for ( j=0; j<ELp[i].nElem; j++ ) {
                     point tmpPoint(ELp[i].sendBuffer0[j],ELp[i].sendBuffer1[j],ELp[i].sendBuffer2[j]);
@@ -273,7 +274,7 @@ void Foam::Elmer<meshT>::initialize()
 
                     if (ELp[i].foundElement[j] > -1) ELp[i].nFoundElements++;
 
-                    if (!multiregion_) f << ELp[i].foundElement[j] << std::endl;
+                    if (!multiregion_) out << ELp[i].foundElement[j] << std::endl;
                 }
             }
 
