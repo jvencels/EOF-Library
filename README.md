@@ -141,3 +141,51 @@ ElmerGrid 2 2 meshElmer -metis 2
 ```
 mpirun -np 2 mhdInterFoam -parallel : -np 2 ElmerSolver_mpi
 ```
+
+#### 3. openfoam.com (v1812, and v2312 or newer) ####
+
+OpenFOAM from openfoam.com is supported in two flavours. In both cases source
+the OpenFOAM `etc/bashrc` and `EOF-Library/etc/bashrc`, put the Elmer `bin`
+directory on the `PATH`, and run `eofCompile`; the solver for these versions is
+`solvers/mhdInterFoamv2606` and the test case is `tests/levitation2Dv2606`.
+
+* **v1812**: `eofCompile` builds the `libs/commSplit` override of `libPstream`
+  first, as for openfoam.org versions below 6. The job is started in the usual
+  order:
+```
+mpirun -np 2 mhdInterFoamv2606 -parallel : -np 2 ElmerSolver_mpi case.sif
+```
+
+* **v2312 or newer, default (native world split)**: the installed `libPstream`
+  is used and OpenFOAM splits `MPI_COMM_WORLD` itself with its run-time option
+  `-mpi-split-by-appnum`. ElmerSolver must then be the **first** application on
+  the `mpirun` line:
+```
+mpirun -np 2 ElmerSolver_mpi case.sif : -np 2 mhdInterFoamv2606 -parallel -mpi-split-by-appnum
+```
+  Starting the job in the old order makes the coupler stop with the message
+  "No partner ranks".
+
+* **v2312 or newer, commSplit override**: set `EOF_COMMSPLIT=1` **before**
+  `eofCompile` and keep it set when running. `eofCompile` then builds
+  `libs/commSplit` into `FOAM_USER_LIBBIN`, the solvers link against it, and
+  either order on the `mpirun` line works:
+```
+export EOF_COMMSPLIT=1
+eofCompile
+wmake $EOF_HOME/solvers/mhdInterFoamv2606
+mpirun -np 2 mhdInterFoamv2606 -parallel : -np 2 ElmerSolver_mpi case.sif
+```
+  The variable is not set by default; the library and the launch order must
+  agree, so do not change it between building and running.
+
+* **Tests**: `tests/travisTests_v2606.sh` builds the libraries and runs
+  `interpolationTest` and `levitation2Dv2606`. It sources the OpenFOAM
+  `etc/bashrc` given in `OPENFOAM_BASHRC` (default
+  `/usr/lib/openfoam/openfoam2606/etc/bashrc`) and honours `EOF_COMMSPLIT`:
+```
+OPENFOAM_BASHRC=/path/to/OpenFOAM-v2606/etc/bashrc tests/travisTests_v2606.sh
+```
+  `tests/travisTests.sh` is the openfoam.org driver and skips the v2606 tests.
+  The reference norm of `levitation2Dv2606` was produced with Elmer 9.0; newer
+  Elmer releases may miss its tolerance slightly.
