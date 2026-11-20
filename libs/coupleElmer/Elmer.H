@@ -47,7 +47,9 @@ Original Date: 12.12.2016.
 #define FatalErrorInFunction FatalErrorIn(FUNCTION_NAME)
 #endif
 
-#if (FOAM_MAJOR_VERSION == v1812 || FOAM_MAJOR_VERSION < 11)
+// Evaluates to true for all openfoam.com versions: there FOAM_MAJOR_VERSION
+// expands to a bare identifier such as v2606, which the preprocessor treats as 0.
+#if (FOAM_MAJOR_VERSION < 11)
 #include "fvCFD.H"
 #else
 #include "fvMesh.H"
